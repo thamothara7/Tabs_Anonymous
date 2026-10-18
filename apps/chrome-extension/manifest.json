@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Tabs Anonymous: Last Tab Standing",
+  "version": "0.1.0",
+  "description": "An animated support group for your tabs. Local metadata, optional approved grouping, zero tab closing.",
+  "action": { "default_popup": "index.html", "default_title": "Start tab therapy" },
+  "optional_permissions": ["tabs", "tabGroups"],
+  "incognito": "not_allowed",
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'self'" }
+}
