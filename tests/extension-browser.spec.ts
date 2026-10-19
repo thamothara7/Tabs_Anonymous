@@ -52,6 +52,14 @@ test('native Chromium grouping, cancel, protected tabs, and reload recovery', as
     await arena.getByRole('button', { name: 'Connect this window' }).click();
     await expect(arena.locator('.extension-banner')).toContainText('2 eligible tabs');
     await arena.getByRole('button', { name: 'Start therapy' }).click();
+    await arena
+      .getByRole('button', { name: 'Select Local hackathon overview', exact: true })
+      .click();
+    await arena.getByRole('button', { name: 'Hear their excuse' }).click();
+    await expect(arena.locator('.caption-copy [role="status"]')).toContainText(
+      'Local hackathon overview',
+    );
+    await arena.getByRole('button', { name: 'Skip scene' }).click();
     for (let i = 0; i < 10; i++) await arena.getByRole('button', { name: 'Skip scene' }).click();
     await arena.getByRole('button', { name: 'Find their people', exact: true }).click();
     await arena.reload();
@@ -62,6 +70,9 @@ test('native Chromium grouping, cancel, protected tabs, and reload recovery', as
     await arena.getByRole('button', { name: 'Next undecided' }).click();
     await arena.getByRole('button', { name: 'Keep in the spotlight', exact: true }).click();
     await arena.getByRole('button', { name: 'The awards ceremony' }).click();
+    const imageDownload = arena.waitForEvent('download');
+    await arena.getByRole('button', { name: 'Save recap card' }).click();
+    expect((await imageDownload).suggestedFilename()).toBe('tabs-anonymous-award.png');
     await arena.getByRole('button', { name: 'Preview native groups' }).click();
     await expect(arena.locator('.native-preview')).toContainText('Big opportunities');
     await expect(arena.locator('.native-preview')).toContainText('Big plans');

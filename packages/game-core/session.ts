@@ -102,6 +102,14 @@ export function decodeSession(
       phase: s.phase,
       beat: s.beat,
       selected: s.selected,
+      actionSerial:
+        Number.isSafeInteger(s.actionSerial) && s.actionSerial >= 0 ? s.actionSerial : 0,
+      history: Array.isArray(s.history)
+        ? s.history
+            .filter((line: unknown) => typeof line === 'string')
+            .slice(-40)
+            .map((line: string) => line.slice(0, 500))
+        : [],
       defended: s.defended,
       seenDuplicates: s.seenDuplicates === true,
       undoStack: s.undoStack,

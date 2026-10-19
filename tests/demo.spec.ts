@@ -13,7 +13,9 @@ test('complete demo, consequences, and recap', async ({ page }, info) => {
   await expect(page.getByRole('button', { name: 'Select LeetCode', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Defend', exact: true }).click();
   await expect(page.locator('.meters')).toContainText('60%');
-  await expect(page.locator('.caption-copy [role="status"]')).toContainText('You defended me');
+  await expect(page.locator('.caption-copy [role="status"]')).toContainText(
+    'You defended “LeetCode”',
+  );
   await page.getByRole('button', { name: 'Skip scene' }).click();
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Skip scene' }).click();
   await expect(page.locator('.duplicate-stamp')).toBeVisible();
@@ -37,18 +39,15 @@ test('complete demo, consequences, and recap', async ({ page }, info) => {
   const cardDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Save recap card', exact: true }).click();
   const card = await cardDownload;
-  expect(card.suggestedFilename()).toBe('tabs-anonymous-award.svg');
-  await card.saveAs(`artifacts/${info.project.name}-award.svg`);
-  if (info.project.name === 'desktop') {
-    const preview = await page.context().newPage();
-    await preview.setViewportSize({ width: 1200, height: 630 });
-    await preview.setContent(
-      '<style>body{margin:0}</style>' + (await readFile('artifacts/desktop-award.svg', 'utf8')),
-    );
-    await expect(preview.locator('svg')).toBeVisible();
-    await preview.locator('svg').screenshot({ path: 'artifacts/award-card.png' });
-    await preview.close();
-  }
+  expect(card.suggestedFilename()).toBe('tabs-anonymous-award.png');
+  await card.saveAs(`artifacts/${info.project.name}-award.png`);
+  const png = await readFile(`artifacts/${info.project.name}-award.png`);
+  expect(png.subarray(1, 4).toString()).toBe('PNG');
+  expect(png.readUInt32BE(16)).toBe(1200);
+  expect(png.readUInt32BE(20)).toBe(630);
+  const svgDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save SVG', exact: true }).click();
+  await (await svgDownload).saveAs(`artifacts/${info.project.name}-award.svg`);
   await page.screenshot({ path: `artifacts/${info.project.name}-results.png`, fullPage: true });
   expect(errors).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(

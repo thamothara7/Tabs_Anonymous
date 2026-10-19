@@ -7,7 +7,7 @@ All character SVGs, scene illustrations, authored implementation, and UI composi
 - Motion for React — MIT.
 - Lucide icons — ISC.
 - DM Sans and Manrope fonts, distributed through Fontsource — SIL Open Font License. The installed Fontsource packages contain license files. Font files are bundled locally.
-- Sound effects are short synthesized Web Audio oscillator tones; no recordings are included.
+- Sound effects are synthesized Web Audio oscillator sequences; no recordings are included.
 
 Official implementation references:
 
@@ -17,3 +17,6 @@ Official implementation references:
 - [Chrome optional permissions](https://developer.chrome.com/docs/extensions/reference/api/permissions)
 
 The source specification contains a broader reading list; no artwork or source code was copied from the referenced community projects.
+
+- Spoken dialogue uses installed English device voices, selected only when marked local. No voice recordings or remote speech provider are bundled.
+- [Web Speech voice discovery](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis/voiceschanged_event) and [local voice distinction](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisVoice/localService).

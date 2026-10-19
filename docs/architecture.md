@@ -21,7 +21,7 @@ flowchart TD
 
 `GameState` owns phase, beat index, character facts and relationships, selected character, interventions, decisions, and history. No Chrome globals are imported into `game-core`. The deterministic story deck uses the same snapshot and seed on every run. Exact-URL duplicate detection preserves the query string; fragments are ignored. Classification matches domain boundaries, never arbitrary substrings.
 
-`NEXT` advances one story beat and applies its effects. Further `NEXT` events outside the playing phase do nothing. The finale requires a decision for every character and enforces at most six kept characters. Defend/Challenge affect clamped trust and confidence; defending and later retiring a tab enables the Betrayer ending. Reset reconstructs the original cast.
+`NEXT` advances one story beat and applies its effects. Further `NEXT` events outside the playing phase do nothing. The finale requires a decision for every character and enforces at most six kept characters. Defend/Challenge affect clamped trust and confidence; defending and later retiring a tab enables the Betrayer ending. Reset reconstructs the original cast with the next dialogue seed. New browser sessions receive a time-based seed; explicit seeds remain deterministic.
 
 ## Animation ownership
 
@@ -46,3 +46,13 @@ The extension is not allowed in incognito windows. Internal URLs are ineligible.
 Versioned sessionStorage checkpoints are validated against the current cast before hydration. Only logical game state is restored; transient speech, grouping approvals, and browser operations are never resumed. Story scenes restart paused at their current beat. The extension first checks existing permissions and reconstructs snapshot facts from a fresh same-window scan. Any saved tab that moved, closed, navigated, or became protected invalidates that snapshot. Browser-managed tab restoration can retain sessionStorage, so the extension offers an explicit Forget session action.
 
 The SVG recap is generated locally from the fictional ending and aggregate fate counts; it deliberately excludes tab titles, URLs, IDs, and categories. The separate text recap keeps the detailed character list.
+
+## Phase-three presentation and audio
+
+The stage reflows the remaining cast and moves retired characters to a horizontally scrollable, selectable tray. Duplicate scenes give the arguing pair their own space. The results list reflects actual keep/group/retire verdicts, including empty buckets, and shows recent dialogue highlights. Bounded history and the dialogue variation counter survive reload.
+
+Dialogue combines bounded titles, boundary-matched host jokes, category variants, duplicates, and prior game choices. `ROAST` uses the same single reaction clock as other interventions. No live page content or external generation is used.
+
+`SessionAudio` unlocks Web Audio on an explicit gesture, schedules cue-specific notes with gain envelopes, and releases nodes on completion. English voices are filtered to `localService`. Late voice discovery cannot restart the animation clock. Muting, pausing, opening a dialog, advancing, and unmounting cancel the old speech. Resuming with voices restarts the current sentence and its timer; without voices it resumes elapsed time. Sound remains optional and unavailable voices fall back to captions/effects.
+
+PNG export rasterizes the self-contained SVG locally at 1200×630. Both formats use only generic artwork, an ending, and aggregate counts. Long award names wrap onto two lines. Text export and on-screen highlights include titles and dialogue; native browser grouping remains separate.

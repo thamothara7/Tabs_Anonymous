@@ -37,7 +37,9 @@ import { endingFor, initialState, MAX_KEEP, reducer } from '../game-core/reducer
 import type { Character, Fate } from '../game-core/types';
 import { AnimationDirector } from '../animation/director';
 import { TabCharacter } from './TabCharacter';
-import { recapSvg, downloadFile } from './recap';
+import { recapSvg, recapText, downloadFile, downloadPng } from './recap';
+import { votingLine } from '../game-core/dialogue';
+import { SessionAudio, lineDuration } from './audio';
 import { VotePanel } from './VotePanel';
 import { loadSession, saveSession } from '../game-core/session';
 import { TherapyArena } from './TherapyArena';
@@ -60,7 +62,10 @@ export function App({
   integration?: ReactNode;
 }) {
   const [restored] = useState(() => loadSession(cast, realMode));
-  const [state, dispatch] = useReducer(reducer, restored ?? initialState(cast));
+  const [state, dispatch] = useReducer(
+    reducer,
+    restored ?? initialState(cast, Math.floor(Date.now() / 1000) % 1000000),
+  );
   const [paused, setPaused] = useState(restored?.phase === 'playing');
   const [saved, setSaved] = useState(false);
   const [showRestored, setShowRestored] = useState(!!restored);
@@ -71,13 +76,19 @@ export function App({
     ),
   );
   const [sound, setSound] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voiceURI, setVoiceURI] = useState('');
+  const [volume, setVolume] = useState(65);
+  const [audioMessage, setAudioMessage] = useState('Enable sound to hear the cast.');
+  const [exporting, setExporting] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [modal, setModal] = useState<'privacy' | 'connect' | 'help' | null>(null);
   const [toast, setToast] = useState('');
   const [rosterOpen, setRosterOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const director = useRef(new AnimationDirector());
-  const audio = useRef<AudioContext | null>(null);
+  const wasPaused = useRef(false);
+  const audio = useRef(new SessionAudio());
 
   const deck = useMemo(() => storyFor(cast, state.seed), [cast, state.seed]);
   const beat = deck[state.beat];
@@ -87,7 +98,7 @@ export function App({
   const line =
     state.actionLine ??
     (state.phase === 'voting'
-      ? 'The floor is yours. Choose each tab’s fate. Nobody’s actual browser tab gets closed.'
+      ? votingLine(state)
       : (beat?.line ??
         `${cast.length} tabs walk into a support group. None of them think they’re the problem.`));
   const speakerId = state.actionLine ? state.actionTarget : beat?.speaker;
@@ -112,19 +123,31 @@ export function App({
   useEffect(() => {
     const d = director.current;
     if (state.actionLine && active)
-      d.play(4200, setElapsed, () => dispatch({ type: 'CLEAR_REACTION' }));
+      d.play(lineDuration(line), setElapsed, () => dispatch({ type: 'CLEAR_REACTION' }));
     else if (state.phase === 'playing' && beat)
-      d.play(beat.duration, setElapsed, () => dispatch({ type: 'NEXT' }));
+      d.play(Math.max(beat.duration, lineDuration(line)), setElapsed, () =>
+        dispatch({ type: 'NEXT' }),
+      );
     else {
       d.cancelAll();
       setElapsed(10000);
     }
     return () => d.cancelAll();
-  }, [state.phase, state.beat, state.actionSerial, state.actionLine, active, beat]);
+  }, [state.phase, state.beat, state.actionSerial, state.actionLine, active, beat, line]);
   useEffect(() => {
-    if (paused || modal) director.current.pause();
-    else director.current.resume();
-  }, [paused, modal]);
+    const stopped = paused || !!modal;
+    if (stopped) director.current.pause();
+    else {
+      // Speech restarts the current sentence after an interruption; give it a full beat.
+      if (wasPaused.current && sound && voiceURI && voiceURI !== 'off' && active) {
+        director.current.play(lineDuration(line), setElapsed, () =>
+          dispatch({ type: state.actionLine ? 'CLEAR_REACTION' : 'NEXT' }),
+        );
+      }
+      director.current.resume();
+    }
+    wasPaused.current = stopped;
+  }, [paused, modal, sound, voiceURI, active, line, state.actionLine]);
   useEffect(() => {
     try {
       localStorage.setItem('ta-motion-reduced', String(reduced));
@@ -138,33 +161,55 @@ export function App({
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
-    if (!sound || !active || paused) return;
-    const ctx = audio.current;
-    if (!ctx) return;
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(
-      cue === 'duplicate' ? 130 : cue === 'victory' ? 660 : 320,
-      ctx.currentTime,
-    );
-    gain.gain.setValueAtTime(0.035, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16);
-    oscillator.start();
-    oscillator.stop(ctx.currentTime + 0.18);
-    return () => {
-      oscillator.disconnect();
-      gain.disconnect();
+    const refresh = () => {
+      const local = audio.current.voices();
+      setVoices(local);
+      setVoiceURI((previous) => previous || local[0]?.voiceURI || '');
     };
-  }, [state.beat, state.actionSerial, sound, active, cue, paused]);
-  useEffect(
-    () => () => {
-      void audio.current?.close();
-    },
-    [],
-  );
+    refresh();
+    if (typeof speechSynthesis !== 'undefined')
+      speechSynthesis.addEventListener('voiceschanged', refresh);
+    return () => {
+      if (typeof speechSynthesis !== 'undefined')
+        speechSynthesis.removeEventListener('voiceschanged', refresh);
+    };
+  }, []);
+  useEffect(() => {
+    audio.current.volume = volume / 100;
+  }, [volume]);
+  useEffect(() => {
+    const engine = audio.current;
+    if (!sound || paused || modal) {
+      engine.stop();
+      return;
+    }
+    if (!active) return;
+    engine.effect(cue);
+    if (voiceURI && voiceURI !== 'off')
+      engine.speak(
+        line,
+        voiceURI,
+        speaker ? 0.9 + (state.characters.findIndex((c) => c.id === speakerId) % 4) * 0.12 : 0.9,
+        () =>
+          setAudioMessage(
+            'Voice playback failed. Try another installed voice. Sound effects are still available.',
+          ),
+      );
+    return () => engine.stop();
+  }, [
+    state.phase,
+    state.beat,
+    state.actionSerial,
+    sound,
+    active,
+    line,
+    cue,
+    paused,
+    modal,
+    voiceURI,
+    speakerId,
+  ]);
+  useEffect(() => () => audio.current.dispose(), []);
   const select = (id: string) => dispatch({ type: 'SELECT', id });
   const decide = (id: string, fate: Fate) => {
     if (paused || modal) return;
@@ -190,17 +235,42 @@ export function App({
     setShowRestored(false);
     dispatch({ type: 'RESET', characters: cast });
   };
-  const toggleSound = async () => {
-    if (!sound) {
-      audio.current ??= new AudioContext();
-      await audio.current.resume();
+  const enableAudio = async () => {
+    try {
+      await audio.current.unlock();
+      audio.current.effect('victory');
+      setSound(true);
+      setAudioMessage('Sound ready. Test it below or choose a local voice.');
+      return true;
+    } catch {
+      setSound(false);
+      setAudioMessage(
+        'Audio could not start. Check the browser tab is unmuted, then try Test sound.',
+      );
+      setToast('Audio could not start. Open Audio settings to retry.');
+      return false;
     }
-    setSound(!sound);
+  };
+  const toggleSound = async () => {
+    if (sound) {
+      audio.current.stop();
+      setSound(false);
+    } else await enableAudio();
   };
   const downloadRecap = () => {
-    const text = `TABS ANONYMOUS — FICTIONAL ARENA RECAP\n${ending.title}\n${ending.description}\n\n${state.characters.map((c) => `${c.name}: ${c.fate}`).join('\n')}\n\nNo browser tabs were closed.\nSeed: ${state.seed}`;
-    downloadFile(text, 'tabs-anonymous-recap.txt', 'text/plain;charset=utf-8');
-    setToast('Your fictional recap has been downloaded.');
+    downloadFile(recapText(state), 'tabs-anonymous-recap.txt', 'text/plain;charset=utf-8');
+    setToast('Detailed recap saved. It includes tab titles; review it before sharing.');
+  };
+  const saveCard = async () => {
+    setExporting(true);
+    try {
+      await downloadPng(recapSvg(state));
+      setToast('PNG award card saved. No tab names or links included.');
+    } catch {
+      setToast('Could not create PNG. Use Save SVG instead.');
+    } finally {
+      setExporting(false);
+    }
   };
   return (
     <div
@@ -287,7 +357,7 @@ export function App({
             </p>
           </div>
           <div className="session-ticket">
-            <span>SESSION № 001</span>
+            <span>YOUR SUPPORT GROUP</span>
             <b>{state.phase === 'results' ? 'MEETING ADJOURNED' : 'LAST TAB STANDING'}</b>
             <span>
               <i /> {realMode ? 'LOCAL & PRIVATE' : 'A FICTIONAL TAB DRAMA'}
@@ -298,12 +368,14 @@ export function App({
           <section className="results" aria-label="Session results">
             <div className="results-art">
               <span className="eyebrow">THE UNOFFICIAL TAB AWARDS</span>
-              <div className="trophy">✶</div>
+              <div className="trophy" aria-hidden="true">
+                🏆
+              </div>
               <h2>{ending.title}</h2>
               <p>{ending.description}</p>
               <div className="award-cast">
                 {state.characters
-                  .filter((c) => c.fate === 'keep')
+                  .filter((c) => kept === 0 || c.fate === 'keep')
                   .slice(0, 6)
                   .map((c) => (
                     <TabCharacter key={c.id} character={c} emotion="victorious" />
@@ -322,15 +394,28 @@ export function App({
                   balcony
                 </span>
               </div>
+              <details className="share-preview">
+                <summary>Preview share card</summary>
+                <img
+                  src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(recapSvg(state))}`}
+                  alt={`Share card: ${ending.title}. ${kept} kept, ${state.characters.filter((c) => c.fate === 'group').length} grouped, ${state.characters.filter((c) => c.fate === 'retire').length} retired.`}
+                />
+              </details>
               <div className="result-actions">
                 <button
                   className="button orange"
-                  onClick={() => {
-                    downloadFile(recapSvg(state), 'tabs-anonymous-award.svg', 'image/svg+xml');
-                    setToast('Recap card saved. It contains no tab names or links.');
-                  }}
+                  onClick={() => void saveCard()}
+                  disabled={exporting}
                 >
-                  <ArrowDownToLine size={17} /> Save recap card
+                  <ArrowDownToLine size={17} /> {exporting ? 'Creating card…' : 'Save recap card'}
+                </button>
+                <button
+                  className="button"
+                  onClick={() =>
+                    downloadFile(recapSvg(state), 'tabs-anonymous-award.svg', 'image/svg+xml')
+                  }
+                >
+                  Save SVG
                 </button>
                 <button className="button" onClick={downloadRecap}>
                   Save text recap
@@ -339,36 +424,44 @@ export function App({
                   <RotateCcw size={16} /> Another session
                 </button>
               </div>
-              <small>Fictional comedy awards. The card includes no tab names or links.</small>
+              <small>
+                PNG / SVG: no browsing details. Text recap: includes tab titles and session
+                highlights.
+              </small>
             </div>
             <div className="result-groups">
-              <div className="eyebrow">
-                {realMode ? 'YOUR ARENA DECISIONS' : 'YOUR MAKE-BELIEVE TAB GROUPS'}
-              </div>
+              <div className="eyebrow">YOUR ARENA DECISIONS</div>
               <h3>A place for every personality.</h3>
-              {Object.entries(categoryNames).map(([category, name]) => {
-                const tabs = state.characters.filter(
-                  (c) => c.category === category && c.fate !== 'retire',
-                );
+              {(['keep', 'group', 'retire'] as const).map((fate, i) => {
+                const tabs = state.characters.filter((c) => c.fate === fate);
                 return (
-                  tabs.length > 0 && (
-                    <div className="group-result" key={category}>
-                      <Folder size={21} style={{ color: tabs[0].color }} />
-                      <div>
-                        <b>{name}</b>
-                        <p>{tabs.map((c) => c.name).join(' · ')}</p>
-                      </div>
-                      <span>{tabs.length}</span>
+                  <div className="group-result" key={fate}>
+                    <Folder size={21} style={{ color: ['#6b8e61', '#9e83bf', '#c77c52'][i] }} />
+                    <div>
+                      <b>{['The headliners', 'Found their people', 'The balcony critics'][i]}</b>
+                      <p>{tabs.map((c) => c.name).join(' · ') || 'No auditions accepted.'}</p>
                     </div>
-                  )
+                    <span>{tabs.length}</span>
+                  </div>
                 );
               })}
+              {state.history.some((h) => h.includes('“')) && (
+                <div className="recap-highlights">
+                  <span className="eyebrow">OVERHEARD IN THERAPY</span>
+                  {state.history
+                    .filter((h) => h.includes('“'))
+                    .slice(-3)
+                    .map((h, i) => (
+                      <p key={i}>{h}</p>
+                    ))}
+                </div>
+              )}
               {integration}
               <p className="safe-note">
                 <ShieldCheck size={16} />
                 {realMode
                   ? 'Real grouping requires a separate preview and approval.'
-                  : 'These groups are fictional. Your real browser hasn’t been touched.'}
+                  : 'These verdicts are fictional. Your real browser hasn’t been touched.'}
               </p>
             </div>
           </section>
@@ -438,13 +531,11 @@ export function App({
                     </span>
                   </div>
                   <p aria-hidden="true">
-                    “
                     {reduced ||
                     state.phase === 'lobby' ||
                     (state.phase === 'voting' && !state.actionLine)
                       ? line
                       : line.slice(0, Math.floor(elapsed / 23))}
-                    ”
                   </p>
                   <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
                     {speaker?.name ?? 'Therapist'}: {line}
@@ -452,6 +543,27 @@ export function App({
                 </div>
                 <span className="caption-on">CC</span>
               </div>
+              {active && selected && (
+                <div className="comedy-controls">
+                  <span>
+                    Selected tab: <b title={selected.title}>{selected.name}</b>
+                  </span>
+                  <button
+                    className="button"
+                    disabled={paused || !!modal}
+                    onClick={() => dispatch({ type: 'SPEAK', id: selected.id })}
+                  >
+                    <Mic size={15} /> Hear their excuse
+                  </button>
+                  <button
+                    className="button roast-button"
+                    disabled={paused || !!modal}
+                    onClick={() => dispatch({ type: 'ROAST', id: selected.id })}
+                  >
+                    🍿 Roast this tab
+                  </button>
+                </div>
+              )}
               <div className="playback">
                 <div className="playback-left">
                   <button
@@ -509,6 +621,72 @@ export function App({
                   </div>
                 </div>
               </div>
+              <details className="audio-settings">
+                <summary>
+                  Audio settings{' '}
+                  <span>
+                    {sound
+                      ? voices.length && voiceURI !== 'off'
+                        ? 'Effects + local voice'
+                        : 'Effects only'
+                      : 'Muted'}
+                  </span>
+                </summary>
+                <div className="audio-options">
+                  <label>
+                    Volume{' '}
+                    <input
+                      aria-label="Sound volume"
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={volume}
+                      onChange={(e) => setVolume(Number(e.target.value))}
+                    />
+                    <output>{volume}%</output>
+                  </label>
+                  <label>
+                    Voice{' '}
+                    <select
+                      aria-label="Local voice"
+                      value={voiceURI}
+                      onChange={(e) => setVoiceURI(e.target.value)}
+                    >
+                      <option value="off">Effects only</option>
+                      {!voices.length && <option value="">No installed English voice</option>}
+                      {voices.map((v) => (
+                        <option key={v.voiceURI} value={v.voiceURI}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="button"
+                    onClick={async () => {
+                      if (await enableAudio()) {
+                        audio.current.speak(
+                          'Testing. One, two. Is this thing emotionally available?',
+                          voiceURI,
+                          1,
+                          () => setAudioMessage('Voice unavailable. Try another installed voice.'),
+                        );
+                      }
+                    }}
+                  >
+                    Test sound
+                  </button>
+                </div>
+                <p role="status">
+                  {audioMessage}{' '}
+                  {!voices.length &&
+                    'No local English voice found; captions and effects remain available.'}
+                </p>
+                <small>
+                  Uses voices installed on this device. Check your tab and system volume if the test
+                  is silent.
+                </small>
+              </details>
             </div>
             <aside className="dossier" aria-label="Character dossier">
               <div className="dossier-top">
@@ -541,6 +719,10 @@ export function App({
                     <h2 title={selected.title}>{selected.name}</h2>
                     <span className="emotion-tag">{selected.emotion}</span>
                   </div>
+                  <details className="full-title" key={selected.id}>
+                    <summary>Full tab title</summary>
+                    <p>{selected.title}</p>
+                  </details>
                   <p className="character-role">{selected.role}</p>
                   <div className="character-facts">
                     <span>
@@ -649,7 +831,7 @@ export function App({
                   ? 'Progress saved in this tab · Restart to clear'
                   : state.phase === 'lobby'
                     ? 'Start therapy to hear their side.'
-                    : 'Click any character to hear their side.'}
+                    : 'Select a character, then hear their excuse.'}
               </div>
             </aside>
           </section>

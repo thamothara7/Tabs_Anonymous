@@ -10,4 +10,6 @@ Pinned, incognito, internal, and currently navigating tabs are excluded. Up to 1
 
 “Retire from arena” and Undo affect fictional game state only. No code path invokes the Chrome tab removal API.
 
-The **SVG recap card** excludes tab names, URLs, IDs, and browsing categories. It contains a fictional award and aggregate game counts. The separate **text recap** includes character names and fictional choices; in real mode those names can contain tab titles. Review that file before sharing it. Permission can be revoked through the browser's extension settings or by removing the extension.
+The **PNG / SVG recap card** excludes tab names, URLs, IDs, and browsing categories. It contains a fictional award and aggregate game counts. The separate **text recap** includes character names, fictional choices, and recent session dialogue; in real mode those names can contain tab titles. Review that file before sharing it. Permission can be revoked through the browser's extension settings or by removing the extension.
+
+Sound is off on entry. Enabling it starts local Web Audio effects and, where available, an installed English speech voice. The app filters voices to `localService` and never selects a remote voice. Spoken lines may include tab titles. Voice choice and volume are session-only; no audio is recorded or uploaded. Dialogue is authored locally using snapshot titles, domains, and game decisions; no model request or live page reading occurs.

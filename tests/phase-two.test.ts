@@ -51,7 +51,7 @@ describe('real-tab ensemble', () => {
     expect(c.name).toBe(c.title);
     const story = storyFor([c]);
     expect(story.some((b) => b.line.includes('video tab'))).toBe(false);
-    expect(story[1].line).toContain('future versions');
+    expect(story[1].line).toContain('A very long conference title');
   });
 });
 describe('verdicts, speakers, and checkpoints', () => {

@@ -1,6 +1,16 @@
-# Phase two — 19 October 2026 · v0.2.0
+# Phase three — 19 October 2026 · v0.3.0
 
-## Added in this phase
+## Updated in this phase
+
+- Replaced tiny overlapping balcony characters with a readable tray; reflowed the stage and isolated duplicate confrontations. Full titles can be expanded.
+- Personal confessions and rotating roasts reference titles, known sites, duplicate matches, category counts, and verdict history. New meetings vary the dialogue seed.
+- Added audible cue sequences, volume, Test sound, local English voice selection, and explicit fallback/error messaging. Pause/mute/dialog/scene changes cancel old speech.
+- PNG award export plus SVG, preview, wrapped titles, two new endings, all-cast results even with zero kept, actual verdict buckets, and session highlights in the text recap.
+- Added real Web Audio startup checks, mocked local-speech lifecycle tests, all-retired/reinstated/reload flows, PNG signature/dimension checks, and extension PNG download testing. Target-device physical audio remains a manual check.
+
+## Previous phase
+
+### Phase-two additions
 
 - Voting beside the stage on desktop and in a fixed bottom dock on phones, with visible progress, Undo, next-undecided selection, and scoped keyboard controls (focus the panel: 1/2/3, N, Z).
 - Event and design personalities, broader domain recognition, conservative title hints, full tab names with bounded visual labels, and a diverse 12-character cast that retains a real duplicate pair.
@@ -12,6 +22,8 @@
 - Native Chromium extension testing in a disposable profile using local fixture tabs. The test-only manifest pregrants permissions so native API behavior can be tested without OS-dialog automation; the distributed manifest retains optional permissions.
 
 ## Verification
+
+- 40 unit tests and 18 browser tests pass (two desktop-only flows are skipped on mobile).
 
 - TypeScript, deterministic core/director/classification/grouping/checkpoint tests.
 - Desktop and mobile full demo, pause, dialogs, reload, Undo, keyboard controls, motion preference, and recap download flows.

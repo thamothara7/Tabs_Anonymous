@@ -1,4 +1,4 @@
-import { confessionFor } from './dialogue';
+import { reactionFor } from './dialogue';
 import { storyFor } from './events';
 import { duplicateGroups } from './classify';
 import type { Character, GameAction, GameState } from './types';
@@ -22,7 +22,7 @@ export function initialState(characters: Character[], seed = 42): GameState {
   };
 }
 export function reducer(state: GameState, action: GameAction): GameState {
-  if (action.type === 'RESET') return initialState(action.characters, state.seed);
+  if (action.type === 'RESET') return initialState(action.characters, state.seed + 1);
   if (action.type === 'SELECT')
     return state.characters.some((c) => c.id === action.id)
       ? { ...state, selected: action.id }
@@ -112,11 +112,6 @@ export function reducer(state: GameState, action: GameAction): GameState {
     const emotion =
       action.fate === 'keep' ? 'victorious' : action.fate === 'retire' ? 'crying' : 'happy';
     const cue = action.fate === 'keep' ? 'victory' : action.fate === 'retire' ? 'retire' : 'group';
-    const lines = {
-      keep: 'I knew you believed in me. I’ve prepared a forty-minute acceptance speech.',
-      group: 'A folder? Finally. Some emotional structure.',
-      retire: 'I WAS A VERY IMPORTANT TAB! …Is there Wi-Fi in the balcony?',
-    };
     return {
       ...state,
       selected: target.id,
@@ -127,26 +122,23 @@ export function reducer(state: GameState, action: GameAction): GameState {
       decisions: state.decisions + (target.fate === 'undecided' ? 1 : 0),
       actionCue: cue,
       actionSerial: state.actionSerial + 1,
-      actionLine: lines[action.fate],
+      actionLine: reactionFor(state, target, action.fate),
       undoStack: [
         ...state.undoStack,
         { id: target.id, fate: target.fate, emotion: target.emotion },
       ].slice(-60),
-      history: [...state.history, `${target.name}: ${action.fate}`],
+      history: [...state.history, reactionFor(state, target, action.fate)].slice(-40),
     };
   }
-  if (action.type === 'SPEAK')
+  if (action.type === 'SPEAK' || action.type === 'ROAST')
     return {
       ...state,
       selected: target.id,
       actionTarget: target.id,
-      actionCue: 'talk',
+      actionCue: action.type === 'ROAST' ? 'popcorn' : 'talk',
       actionSerial: state.actionSerial + 1,
-      actionLine: target.pinned
-        ? 'I have tenure. You cannot fire tenure.'
-        : target.audible
-          ? 'I’m not interrupting. I’m providing the soundtrack to this meeting.'
-          : confessionFor(target.category, state.actionSerial),
+      actionLine: reactionFor(state, target, action.type),
+      history: [...state.history, reactionFor(state, target, action.type)].slice(-40),
     };
   if (action.type === 'DEFEND' || action.type === 'CHALLENGE') {
     const defend = action.type === 'DEFEND';
@@ -165,9 +157,8 @@ export function reducer(state: GameState, action: GameAction): GameState {
           : c,
       ),
       defended: defend ? [...new Set([...state.defended, target.id])] : state.defended,
-      actionLine: defend
-        ? 'You defended me? I’m putting you in my acknowledgments. Right after the Wi-Fi.'
-        : 'Objection! My lack of usefulness is a highly specialized feature.',
+      actionLine: reactionFor(state, target, action.type),
+      history: [...state.history, reactionFor(state, target, action.type)].slice(-40),
       actionCue: defend ? 'victory' : 'angry',
       actionSerial: state.actionSerial + 1,
     };
@@ -181,6 +172,18 @@ export function endingFor(state: GameState): { title: string; description: strin
       title: 'The Betrayer',
       description:
         'You gave them hope. Then you gave them a seat in the balcony. The tabs will remember this.',
+    };
+  if (state.characters.length && state.characters.every((c) => c.fate === 'retire'))
+    return {
+      title: 'The Balcony Landlord',
+      description:
+        'Every tab got a room with a view. You now run a very judgmental bed and breakfast.',
+    };
+  if (state.characters.length && state.characters.every((c) => c.fate === 'group'))
+    return {
+      title: 'The Folder Philanthropist',
+      description:
+        'A folder for everyone. You didn’t reduce the chaos. You gave it postal addresses.',
     };
   if (
     kept.filter((c) => ['video', 'social', 'shopping'].includes(c.category)).length >

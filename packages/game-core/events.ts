@@ -1,4 +1,4 @@
-import { confessionFor } from './dialogue';
+import { personalLine, shortTitle } from './dialogue';
 import { duplicateGroups } from './classify';
 import type { Beat, Character } from './types';
 export function storyFor(cast: Character[], seed = 42): Beat[] {
@@ -14,21 +14,21 @@ export function storyFor(cast: Character[], seed = 42): Beat[] {
   return [
     {
       speaker: 'therapist',
-      line: 'Welcome to Tabs Anonymous. A safe space for things you said you’d come back to.',
+      line: `Welcome to Tabs Anonymous. ${cast.length} tabs, ${new Set(cast.map((c) => c.category)).size} personalities, one person insisting this is a system.`,
       cue: 'entrance',
       duration: 6500,
       label: 'Everybody, take a seat.',
     },
     {
       speaker: worker?.id ?? 'therapist',
-      line: confessionFor(worker?.category ?? 'other', seed),
+      line: worker ? personalLine(worker, seed) : 'An empty room. Finally, some peace.',
       cue: 'talk',
       duration: 7200,
       label: 'The first confession',
     },
     {
       speaker: entertainer?.id ?? 'therapist',
-      line: confessionFor(entertainer?.category ?? 'other', seed),
+      line: entertainer ? personalLine(entertainer, seed + 1) : 'Even the chairs have left.',
       cue: 'talk',
       duration: 6500,
       target: worker?.id,
@@ -37,8 +37,8 @@ export function storyFor(cast: Character[], seed = 42): Beat[] {
     {
       speaker: duplicate?.[0] ?? by('study'),
       line: duplicate
-        ? 'Wait. Same address. Same face. One of us is redundant. Statistically, it’s him.'
-        : 'I brought an agenda. Apparently we’re doing interpretive chaos instead.',
+        ? `Wait. Another “${shortTitle(cast.find((c) => c.id === duplicate[1])!)}”? Same address. One of us is redundant. Statistically, it’s him.`
+        : `No duplicates today. Just ${cast.length} completely original excuses for staying open.`,
       cue: duplicate ? 'duplicate' : 'talk',
       duration: 7800,
       target: duplicate?.[1],
@@ -67,7 +67,7 @@ export function storyFor(cast: Character[], seed = 42): Beat[] {
       line:
         entertainer?.category === 'video'
           ? 'I propose a productivity alliance. The video tab can take the minutes. Quietly.'
-          : 'I propose a productivity alliance. Membership includes a shared folder and unreasonable optimism.',
+          : `I propose an alliance with “${entertainer ? shortTitle(entertainer) : 'the empty chair'}”. Our combined potential is now officially a scheduling problem.`,
       cue: 'betrayal',
       duration: 6500,
       target: entertainer?.id,
