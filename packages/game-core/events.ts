@@ -1,8 +1,15 @@
+import { confessionFor } from './dialogue';
 import { duplicateGroups } from './classify';
 import type { Beat, Character } from './types';
 export function storyFor(cast: Character[], seed = 42): Beat[] {
   const by = (category: Character['category']) =>
     cast.find((c) => c.category === category)?.id ?? cast[0]?.id ?? 'therapist';
+  const worker =
+    cast.find((c) => ['code', 'study', 'events', 'design'].includes(c.category)) ?? cast[0];
+  const entertainer =
+    cast.find((c) => ['video', 'social', 'shopping'].includes(c.category)) ??
+    cast.find((c) => c.id !== worker?.id) ??
+    cast[0];
   const duplicate = duplicateGroups(cast)[0];
   return [
     {
@@ -13,21 +20,18 @@ export function storyFor(cast: Character[], seed = 42): Beat[] {
       label: 'Everybody, take a seat.',
     },
     {
-      speaker: by('code'),
-      line:
-        seed % 2
-          ? 'I was opened for personal growth. So far, I’ve only witnessed personal scrolling.'
-          : 'I haven’t been solved. I’ve been emotionally bookmarked.',
+      speaker: worker?.id ?? 'therapist',
+      line: confessionFor(worker?.category ?? 'other', seed),
       cue: 'talk',
       duration: 7200,
       label: 'The first confession',
     },
     {
-      speaker: by('video'),
-      line: 'Your Honor, educational procrastination is still educational.',
+      speaker: entertainer?.id ?? 'therapist',
+      line: confessionFor(entertainer?.category ?? 'other', seed),
       cue: 'talk',
       duration: 6500,
-      target: by('code'),
+      target: worker?.id,
       label: 'A very reasonable defense',
     },
     {
@@ -52,26 +56,29 @@ export function storyFor(cast: Character[], seed = 42): Beat[] {
     },
     {
       speaker: 'therapist',
-      line: 'Let’s form healthy attachments. Preferably not twelve of them in the same window.',
+      line: `Let’s form healthy attachments. Preferably not ${cast.length} of them in the same window.`,
       cue: 'betrayal',
       duration: 6500,
       target: by('study'),
       label: 'Round 02 · Questionable alliances',
     },
     {
-      speaker: by('code'),
-      line: 'I propose a productivity alliance. The video tab can take the minutes. Quietly.',
+      speaker: worker?.id ?? 'therapist',
+      line:
+        entertainer?.category === 'video'
+          ? 'I propose a productivity alliance. The video tab can take the minutes. Quietly.'
+          : 'I propose a productivity alliance. Membership includes a shared folder and unreasonable optimism.',
       cue: 'betrayal',
       duration: 6500,
-      target: by('video'),
+      target: entertainer?.id,
       label: 'A hostile reorganization',
     },
     {
-      speaker: by('video'),
+      speaker: entertainer?.id ?? 'therapist',
       line: 'Sure. Here are the minutes: one minute ago, this meeting had no popcorn. You’re welcome.',
       cue: 'popcorn',
       duration: 7000,
-      target: by('code'),
+      target: worker?.id,
       label: 'Productivity has left the chat',
     },
     {

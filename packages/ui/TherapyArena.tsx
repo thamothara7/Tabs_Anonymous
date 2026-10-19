@@ -1,6 +1,6 @@
-import { useRef, type CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { motion } from 'motion/react';
-import { ArrowUpRight, CirclePlay, Grip } from 'lucide-react';
+import { ArrowUpRight, CirclePlay, Grip, Mic } from 'lucide-react';
 import { TabCharacter } from './TabCharacter';
 import type { Beat, Character, Cue, GameState } from '../game-core/types';
 const seats = [
@@ -40,7 +40,20 @@ export function TherapyArena({
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const lobby = state.phase === 'lobby';
-  const acting = state.actionCue ? state.selected : beat?.speaker;
+  const acting = state.actionCue ? state.actionTarget : beat?.speaker;
+  const actorIndex = state.characters.findIndex((c) => c.id === acting);
+  const actorSeat = seats[Math.max(0, actorIndex)] ?? seats[0];
+  const previousMic = useRef(actorSeat);
+  const fromMic = previousMic.current;
+  useEffect(() => {
+    previousMic.current = actorSeat;
+  }, [acting]);
+  const reactionIds = [
+    beat?.target,
+    state.characters.find((c) => c.id !== acting && c.allies.includes(acting ?? ''))?.id,
+  ]
+    .filter(Boolean)
+    .slice(0, 2);
   return (
     <div
       ref={stageRef}
@@ -98,9 +111,20 @@ export function TherapyArena({
           const balconyIndex = state.characters
             .filter((c) => c.fate === 'retire')
             .findIndex((c) => c.id === character.id);
-          const [x, y, scale] = retired
+          let [x, y, scale] = retired
             ? [17 + balconyIndex * 6, 16, 0.38]
             : [seatX, seatY, seatScale];
+          if (
+            !retired &&
+            cue === 'duplicate' &&
+            [beat?.speaker, beat?.target].includes(character.id)
+          ) {
+            x = character.id === beat?.speaker ? 37 : 63;
+            y = 58;
+            scale = 1.1;
+          } else if (!retired && character.allies.length && !reduced) x += x < 48 ? 2 : -2;
+          const reacts =
+            !state.actionCue && reactionIds.includes(character.id) && character.id !== acting;
           const style = {
             '--seat-scale': scale,
             '--cast-delay': `${index * 110}ms`,
@@ -111,7 +135,7 @@ export function TherapyArena({
           return (
             <div
               key={character.id}
-              className={`seat ${selected ? 'selected' : ''} ${speaking ? 'has-mic' : ''} ${retired ? 'retired' : ''} ${grouped ? 'grouped' : ''}`}
+              className={`seat ${selected ? 'selected' : ''} ${speaking ? 'has-mic' : ''} ${retired ? 'retired' : ''} ${grouped ? 'grouped' : ''} ${reacts ? 'secondary-reaction' : ''}`}
               style={style}
             >
               <div className="chair">
@@ -120,9 +144,10 @@ export function TherapyArena({
               </div>
               {speaking && <div className="speaker-glow" />}
               <motion.button
-                className={`character ${lobby ? '' : 'entered'} ${speaking ? `acting-${cue}` : ''}`}
+                className={`character ${state.phase === 'playing' && state.beat === 0 ? 'entered' : ''} ${speaking ? `acting-${cue}` : ''}`}
                 aria-label={`Select ${character.name}`}
                 aria-pressed={selected}
+                title={character.title}
                 onClick={() => onSelect(character.id)}
                 drag={state.phase === 'voting' && !paused && !reduced}
                 dragSnapToOrigin
@@ -139,7 +164,11 @@ export function TherapyArena({
                 whileDrag={{ scale: 1.1, zIndex: 100 }}
                 style={{ touchAction: state.phase === 'voting' ? 'none' : 'auto' }}
               >
-                <TabCharacter character={character} speaking={speaking && !state.actionCue} />
+                <TabCharacter
+                  character={character}
+                  speaking={speaking && (!state.actionCue || cue === 'talk')}
+                  gaze={speaking ? 0 : Math.sign(actorSeat[0] - x)}
+                />
                 {speaking && (
                   <span className="reaction-badge">
                     {cue === 'duplicate'
@@ -153,6 +182,15 @@ export function TherapyArena({
                             : cue === 'group'
                               ? '↳'
                               : '•••'}
+                  </span>
+                )}
+                {reacts && (
+                  <span className="listening-reaction" aria-hidden="true">
+                    {character.emotion === 'angry'
+                      ? '!!'
+                      : character.allies.includes(acting ?? '')
+                        ? '♡'
+                        : '?!'}
                   </span>
                 )}
                 <span className="character-name">
@@ -171,6 +209,23 @@ export function TherapyArena({
             </div>
           );
         })}
+      {!lobby && actorIndex >= 0 && state.characters[actorIndex]?.fate !== 'retire' && (
+        <div
+          key={acting}
+          className="stage-mic"
+          aria-hidden="true"
+          style={
+            {
+              left: `${actorSeat[0]}%`,
+              top: `${actorSeat[1]}%`,
+              '--mic-from-x': `${fromMic[0] - actorSeat[0]}cqw`,
+              '--mic-from-y': `${(fromMic[1] - actorSeat[1]) * 4}px`,
+            } as CSSProperties
+          }
+        >
+          <Mic size={20} />
+        </div>
+      )}
       {lobby && (
         <>
           <div className="lobby-cast">

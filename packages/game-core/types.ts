@@ -1,4 +1,5 @@
-export type Category = 'code' | 'video' | 'study' | 'shopping' | 'social' | 'other';
+export type Category =
+  'code' | 'video' | 'study' | 'shopping' | 'social' | 'events' | 'design' | 'other';
 export type Emotion =
   'neutral' | 'happy' | 'smug' | 'angry' | 'shocked' | 'crying' | 'suspicious' | 'victorious';
 export type Fate = 'undecided' | 'keep' | 'group' | 'retire';
@@ -54,6 +55,8 @@ export interface GameState {
   actionLine: string | null;
   actionCue: Cue | null;
   actionSerial: number;
+  actionTarget: string | null;
+  undoStack: { id: string; fate: Fate; emotion: Emotion }[];
   defended: string[];
   decisions: number;
   history: string[];
@@ -65,5 +68,6 @@ export type GameAction =
   | { type: 'DEFEND' | 'CHALLENGE' | 'SPEAK'; id: string }
   | { type: 'DECIDE'; id: string; fate: Fate }
   | { type: 'FINISH' }
+  | { type: 'UNDO_DECISION' }
   | { type: 'RESET'; characters: Character[] }
   | { type: 'CLEAR_REACTION' };

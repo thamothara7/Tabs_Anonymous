@@ -2774,3 +2774,428 @@ h1 em {
 .seat.retired .tab-rig {
   opacity: 0.85;
 }
+/* Phase two: vote beside the cast, preserve context, and keep long tab names readable. */
+.resume-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #edf1e4;
+  border: 1px solid #d7e0ca;
+  border-radius: 6px;
+  color: #62764f;
+  font-size: 11px;
+  line-height: 1.6;
+  padding: 10px 14px;
+  margin-top: 16px;
+}
+.character-name {
+  max-width: 160px;
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.3;
+  margin: 0 auto;
+  width: max-content;
+  overflow-wrap: anywhere;
+}
+.character-name:has(small) {
+  -webkit-line-clamp: 3;
+}
+.dossier-name h2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.dossier-name .emotion-tag {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workspace.is-voting {
+  align-items: start;
+  margin-bottom: 30px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+.is-voting .dossier {
+  position: sticky;
+  top: 16px;
+}
+.is-voting .portrait {
+  height: 96px;
+  margin: 10px 0 13px;
+}
+.is-voting .portrait > .tab-rig {
+  width: 106px;
+  top: 0;
+}
+.is-voting .portrait:before {
+  width: 75px;
+  height: 75px;
+  top: 10px;
+}
+.is-voting .dossier-name h2 {
+  font-size: 16px;
+}
+.is-voting .character-facts {
+  margin: 10px 0 0;
+}
+.is-voting .dossier-foot {
+  margin-top: 12px;
+  font-size: 8px;
+}
+.is-voting .theater {
+  height: clamp(340px, calc(100dvh - 320px), 480px);
+}
+.vote-sidebar {
+  margin: 12px -4px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.vote-sidebar .vote-heading > .eyebrow {
+  font-size: 8px;
+}
+.vote-sidebar .vote-heading h3 {
+  display: none;
+}
+.vote-sidebar .vote-heading p {
+  font-size: 10px;
+  margin: 8px 0;
+  color: #697c59;
+}
+.vote-sidebar .vote-heading p > span {
+  float: right;
+}
+.verdict-progress {
+  height: 4px;
+  border-radius: 4px;
+  background: #e5e9dc;
+  overflow: hidden;
+}
+.verdict-progress > i {
+  display: block;
+  height: 100%;
+  background: #8aab77;
+  transition: width 0.25s;
+}
+.vote-sidebar .vote-zones {
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 13px 0;
+}
+.vote-sidebar .vote-zones > button {
+  padding: 12px 10px;
+  gap: 9px;
+  border-style: solid;
+  position: relative;
+}
+.vote-sidebar .vote-zones > button[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 1px currentColor;
+  background: #e7eddc;
+}
+.vote-sidebar .vote-zones > button:nth-child(2)[aria-pressed='true'] {
+  background: #e9e1f0;
+}
+.vote-sidebar .vote-zones > button:nth-child(3)[aria-pressed='true'] {
+  background: #f0e2cf;
+}
+.vote-sidebar .vote-zones b {
+  font-size: 10px;
+}
+.vote-sidebar .vote-zones small {
+  font-size: 8px;
+}
+.vote-sidebar kbd {
+  font: 9px monospace;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin-left: auto;
+  opacity: 0.5;
+}
+.vote-sidebar .vote-footer {
+  gap: 7px;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+.vote-sidebar .vote-footer .button {
+  font-size: 9px;
+  padding: 10px 8px;
+  gap: 5px;
+}
+.next-verdict {
+  flex: 1;
+}
+.vote-hint {
+  font-size: 8px;
+  line-height: 1.7;
+  color: #8e987f;
+  margin-top: 11px;
+}
+.vote-sidebar:focus-visible {
+  outline: 2px solid #bd9369;
+  outline-offset: 7px;
+  border-radius: 4px;
+}
+.stage-mic {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f3d49d;
+  color: #354b46;
+  border: 2px solid #d9b97c;
+  margin: 18px 0 0 35px;
+  box-shadow: 0 4px 0 #20373544;
+  animation: mic-pass 0.65s cubic-bezier(0.23, 0.8, 0.3, 1) both;
+}
+.listening-reaction {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: #dceac6;
+  color: #526b45;
+  font: 10px monospace;
+  animation: reaction 0.35s both;
+}
+.secondary-reaction .rig-body {
+  animation: listen-nod 0.65s 2;
+}
+.cue-duplicate .duplicate-stamp {
+  top: 29%;
+  font-size: clamp(18px, 3cqw, 32px);
+}
+.cue-duplicate .has-mic .arm.right {
+  transform: rotate(-100deg);
+}
+.cue-duplicate .secondary-reaction .arm.left {
+  transform: rotate(100deg);
+}
+.pupils {
+  transition: transform 0.25s;
+}
+.seat:has(.entered) .chair {
+  animation: chair-land 0.5s both;
+  animation-delay: calc(var(--cast-delay) + 0.75s);
+}
+@keyframes mic-pass {
+  0% {
+    transform: translate(var(--mic-from-x), var(--mic-from-y)) rotate(-70deg);
+    opacity: 0.4;
+  }
+  55% {
+    transform: translateY(-60px) rotate(15deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0) rotate(-12deg);
+  }
+}
+@keyframes listen-nod {
+  40% {
+    transform: rotate(5deg) translateY(-3px);
+  }
+  80% {
+    transform: rotate(-3deg);
+  }
+}
+@keyframes chair-land {
+  30% {
+    transform: rotate(6deg) scaleY(0.87);
+  }
+  65% {
+    transform: rotate(-6deg);
+  }
+  100% {
+    transform: rotate(-3deg);
+  }
+}
+@media (max-width: 1100px) and (min-width: 761px) {
+  .workspace.is-voting {
+    grid-template-columns: minmax(0, 1fr) 255px;
+  }
+  .vote-sidebar .vote-zones > button {
+    padding: 10px 8px;
+  }
+  .vote-sidebar .vote-footer .button {
+    font-size: 8px;
+  }
+  .vote-sidebar .vote-zones b {
+    font-size: 9px;
+  }
+  .is-voting .portrait {
+    height: 85px;
+  }
+  .is-voting .portrait > .tab-rig {
+    width: 98px;
+  }
+}
+@media (max-width: 760px) {
+  .workspace.is-voting {
+    grid-template-columns: 1fr;
+    margin-bottom: 15px;
+  }
+  .is-voting .dossier {
+    position: static;
+    display: contents;
+  }
+  .is-voting .dossier > .dossier-top,
+  .is-voting .dossier .portrait,
+  .is-voting .dossier .dossier-name,
+  .is-voting .dossier .character-role,
+  .is-voting .dossier .character-facts,
+  .is-voting .dossier .dossier-foot {
+    display: none;
+  }
+  .vote-sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 12px 4% max(12px, env(safe-area-inset-bottom));
+    border-top: 1px solid #c9d1be;
+    border-radius: 14px 14px 0 0;
+    background: #fafbf3fa;
+    box-shadow: 0 -4px 25px #30432e19;
+    z-index: 40;
+    backdrop-filter: blur(12px);
+  }
+  .voting-mode {
+    padding-bottom: 220px;
+  }
+  .vote-sidebar .vote-heading {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 12px;
+  }
+  .vote-sidebar .vote-heading > .eyebrow {
+    display: none;
+  }
+  .vote-sidebar .vote-heading h3 {
+    display: block;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+  }
+  .vote-sidebar .vote-heading p {
+    font-size: 9px;
+    margin: 2px 0 0;
+  }
+  .vote-sidebar .vote-heading p > span {
+    display: none;
+  }
+  .vote-sidebar .verdict-progress {
+    margin-top: 9px;
+    height: 3px;
+  }
+  .vote-sidebar .vote-zones {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+    margin: 10px 0;
+  }
+  .vote-sidebar .vote-zones > button {
+    padding: 10px 8px;
+    min-height: 52px;
+    gap: 6px;
+    align-items: center;
+  }
+  .vote-sidebar .vote-zones b {
+    font-size: 9px;
+    line-height: 1.5;
+  }
+  .vote-sidebar .vote-zones small,
+  .vote-sidebar kbd {
+    display: none;
+  }
+  .vote-sidebar .vote-zones svg {
+    width: 16px;
+  }
+  .vote-sidebar .vote-footer {
+    flex-direction: row;
+  }
+  .vote-sidebar .vote-footer .button {
+    font-size: 10px;
+    padding: 10px 12px;
+    min-height: 35px;
+  }
+  .vote-sidebar .undo-verdict {
+    flex: 0.4;
+  }
+  .vote-hint {
+    display: none;
+  }
+  .is-voting .theater {
+    height: 410px;
+  }
+  .character-name {
+    max-width: 145px;
+  }
+  .roster {
+    margin-bottom: 24px;
+  }
+  .resume-banner {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app:not(.reduced-motion) .pupils {
+    transition: transform 0.25s;
+  }
+}
+.reduced-motion .stage-mic {
+  animation: none !important;
+  transform: rotate(-12deg);
+}
+.reduced-motion .secondary-reaction .rig-body {
+  animation: none !important;
+}
+.result-actions {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.result-actions > .button {
+  font-size: 11px;
+}
+.result-actions > .button:not(.orange) {
+  color: var(--ink);
+}
+.results-art > small {
+  line-height: 1.7;
+}
+.voting-mode .roster-items button {
+  overflow-wrap: anywhere;
+}
+.roster-items button {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  html:has(.voting-mode) {
+    scroll-padding-bottom: 220px;
+  }
+}
+.extension-banner > button {
+  margin-left: 14px;
+  border: 1px solid #b8c6a9;
+  border-radius: 4px;
+  font: 9px monospace;
+  color: #536d45;
+  padding: 4px 7px;
+}
+.extension-banner > button:hover {
+  background: #d8e5cd;
+}

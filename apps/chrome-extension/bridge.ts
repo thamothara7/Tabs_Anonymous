@@ -37,6 +37,8 @@ const colors: Record<Category, chrome.tabGroups.TabGroup['color']> = {
   study: 'green',
   shopping: 'yellow',
   social: 'pink',
+  events: 'orange',
+  design: 'blue',
   other: 'cyan',
 };
 export function eligible(tab: BrowserTab, windowId: number): boolean {
@@ -58,7 +60,7 @@ export function snapshot(tabs: BrowserTab[], windowId: number): TabFact[] {
       windowId,
       title: t.title?.trim().slice(0, 120) || 'Untitled tab',
       url: t.url!,
-      category: classify(t.url!),
+      category: classify(t.url!, t.title ?? ''),
       pinned: false,
       audible: !!t.audible,
       protected: false,

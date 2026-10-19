@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { App } from '../../packages/ui/App';
+import { featuredTabs } from '../../packages/game-core/casting';
+import { sessionKey } from '../../packages/game-core/session';
+import { encodeSnapshot, restoreSnapshot, SNAPSHOT_KEY } from './session';
 import { makeCharacter } from '../../packages/game-core/fixtures';
 import type { TabFact } from '../../packages/game-core/types';
 import { snapshot, type TabPort } from './bridge';
@@ -21,6 +24,59 @@ function Extension() {
   const [demo, setDemo] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [restoring, setRestoring] = useState(inArena);
+  const cast = useMemo(() => featuredTabs(tabs ?? []).map(makeCharacter), [tabs]);
+  useEffect(() => {
+    if (!inArena) return;
+    let cancelled = false;
+    const restore = async () => {
+      try {
+        const raw = sessionStorage.getItem(SNAPSHOT_KEY);
+        if (!raw) return;
+        const permitted = await chrome.permissions.contains({ permissions: ['tabs', 'tabGroups'] });
+        if (!permitted) throw new Error('Reconnect to grant access before restoring your session.');
+        const current = await chrome.windows.getCurrent();
+        if (current.id === undefined || current.incognito)
+          throw new Error('Open a regular window to reconnect.');
+        const fresh = snapshot(await port.query(current.id), current.id);
+        const restored = restoreSnapshot(raw, fresh, current.id);
+        if (!restored)
+          throw new Error(
+            'Your tabs changed since the saved session. Connect again for a fresh cast.',
+          );
+        if (!cancelled) {
+          setWindowId(current.id);
+          setTabs(restored);
+        }
+      } catch (e) {
+        try {
+          sessionStorage.removeItem(SNAPSHOT_KEY);
+          sessionStorage.removeItem(sessionKey(true));
+        } catch {
+          /* Optional browser storage. */
+        }
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : 'Connect again to start a fresh session.');
+      } finally {
+        if (!cancelled) setRestoring(false);
+      }
+    };
+    void restore();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const forgetSession = () => {
+    try {
+      sessionStorage.removeItem(SNAPSHOT_KEY);
+      sessionStorage.removeItem(sessionKey(true));
+    } catch {
+      /* Storage may be unavailable. */
+    }
+    setTabs(null);
+    setWindowId(null);
+    setError('');
+  };
   const connect = async () => {
     setError('');
     setBusy(true);
@@ -38,6 +94,12 @@ function Extension() {
         setError('No eligible tabs in this window. Open a regular website, or try the demo.');
         return;
       }
+      try {
+        sessionStorage.setItem(SNAPSHOT_KEY, encodeSnapshot(data, window.id));
+        sessionStorage.removeItem(sessionKey(true));
+      } catch {
+        /* The session still works without storage. */
+      }
       setWindowId(window.id);
       setTabs(data);
     } catch (e) {
@@ -46,6 +108,14 @@ function Extension() {
       setBusy(false);
     }
   };
+  if (restoring)
+    return (
+      <main className="extension-launch" role="status">
+        <span className="eyebrow">TABS ANONYMOUS</span>
+        <h1>Finding your seat…</h1>
+        <p>Checking the saved session against the tabs in this window.</p>
+      </main>
+    );
   if (demo) return <App />;
   if (tabs && windowId !== null)
     return (
@@ -53,9 +123,10 @@ function Extension() {
         <div className="extension-banner">
           LOCAL SESSION · {tabs.length} eligible tabs · {Math.min(tabs.length, 12)} featured
           characters · tab metadata stays on this device
+          <button onClick={forgetSession}>Forget session</button>
         </div>
         <App
-          cast={tabs.slice(0, 12).map(makeCharacter)}
+          cast={cast}
           realMode
           integration={<GroupPreview tabs={tabs} windowId={windowId} port={port} />}
         />
@@ -74,7 +145,8 @@ function Extension() {
         <>
           <p>
             Pinned tabs, internal pages, and private tabs are excluded. Up to 12 tabs become
-            characters; every eligible tab can appear in the separate grouping preview.
+            characters; every eligible tab can appear in the separate grouping preview. Progress is
+            saved in this tab so you can reload. Use Forget session to clear it.
           </p>
           <button className="button orange" disabled={busy} onClick={() => void connect()}>
             {busy ? 'Connecting…' : 'Connect this window'}

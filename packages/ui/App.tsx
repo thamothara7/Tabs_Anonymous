@@ -25,8 +25,6 @@ import {
   RotateCcw,
   ShieldCheck,
   SkipForward,
-  Sparkles,
-  Star,
   Volume2,
   VolumeX,
   X,
@@ -39,6 +37,9 @@ import { endingFor, initialState, MAX_KEEP, reducer } from '../game-core/reducer
 import type { Character, Fate } from '../game-core/types';
 import { AnimationDirector } from '../animation/director';
 import { TabCharacter } from './TabCharacter';
+import { recapSvg, downloadFile } from './recap';
+import { VotePanel } from './VotePanel';
+import { loadSession, saveSession } from '../game-core/session';
 import { TherapyArena } from './TherapyArena';
 
 function readPreference(key: string, fallback: boolean) {
@@ -58,8 +59,11 @@ export function App({
   realMode?: boolean;
   integration?: ReactNode;
 }) {
-  const [state, dispatch] = useReducer(reducer, cast, initialState);
-  const [paused, setPaused] = useState(false);
+  const [restored] = useState(() => loadSession(cast, realMode));
+  const [state, dispatch] = useReducer(reducer, restored ?? initialState(cast));
+  const [paused, setPaused] = useState(restored?.phase === 'playing');
+  const [saved, setSaved] = useState(false);
+  const [showRestored, setShowRestored] = useState(!!restored);
   const [reduced, setReduced] = useState(() =>
     readPreference(
       'ta-motion-reduced',
@@ -86,13 +90,25 @@ export function App({
       ? 'The floor is yours. Choose each tab’s fate. Nobody’s actual browser tab gets closed.'
       : (beat?.line ??
         `${cast.length} tabs walk into a support group. None of them think they’re the problem.`));
-  const speakerId = state.actionLine ? state.selected : beat?.speaker;
+  const speakerId = state.actionLine ? state.actionTarget : beat?.speaker;
   const speaker = state.characters.find((c) => c.id === speakerId);
   const cue = state.actionCue ?? beat?.cue ?? 'talk';
   const round = state.phase === 'results' || state.phase === 'voting' ? 3 : state.beat >= 5 ? 2 : 1;
   const kept = state.characters.filter((c) => c.fate === 'keep').length;
   const remaining = state.characters.filter((c) => c.fate === 'undecided').length;
   const ending = endingFor(state);
+  const nextUndecided = () => {
+    const current = state.characters.findIndex((c) => c.id === state.selected);
+    const ordered = [
+      ...state.characters.slice(current + 1),
+      ...state.characters.slice(0, current + 1),
+    ];
+    const next = ordered.find((c) => c.fate === 'undecided');
+    if (next) dispatch({ type: 'SELECT', id: next.id });
+  };
+  useEffect(() => {
+    setSaved(saveSession(state, realMode));
+  }, [state, realMode]);
   useEffect(() => {
     const d = director.current;
     if (state.actionLine && active)
@@ -171,6 +187,7 @@ export function App({
   };
   const restart = () => {
     setPaused(false);
+    setShowRestored(false);
     dispatch({ type: 'RESET', characters: cast });
   };
   const toggleSound = async () => {
@@ -182,17 +199,12 @@ export function App({
   };
   const downloadRecap = () => {
     const text = `TABS ANONYMOUS — FICTIONAL ARENA RECAP\n${ending.title}\n${ending.description}\n\n${state.characters.map((c) => `${c.name}: ${c.fate}`).join('\n')}\n\nNo browser tabs were closed.\nSeed: ${state.seed}`;
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'tabs-anonymous-recap.txt';
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadFile(text, 'tabs-anonymous-recap.txt', 'text/plain;charset=utf-8');
     setToast('Your fictional recap has been downloaded.');
   };
   return (
     <div
-      className={`app ${dragging ? 'is-dragging' : ''} ${reduced ? 'reduced-motion' : ''} ${paused || modal ? 'is-paused' : ''}`}
+      className={`app ${state.phase === 'voting' ? 'voting-mode' : ''} ${dragging ? 'is-dragging' : ''} ${reduced ? 'reduced-motion' : ''} ${paused || modal ? 'is-paused' : ''}`}
     >
       <header className="topbar">
         <a
@@ -246,6 +258,14 @@ export function App({
         </div>
       </header>
       <main>
+        {showRestored && state.phase !== 'lobby' && (
+          <div className="resume-banner" role="status">
+            <RotateCcw size={14} /> Session restored in this tab.{' '}
+            {state.phase === 'playing' && paused
+              ? 'Press Resume to continue the scene.'
+              : 'Your decisions are still here.'}
+          </div>
+        )}
         <section className="page-heading">
           <div>
             <div className="eyebrow">
@@ -303,14 +323,23 @@ export function App({
                 </span>
               </div>
               <div className="result-actions">
-                <button className="button orange" onClick={downloadRecap}>
-                  <ArrowDownToLine size={17} /> Save recap
+                <button
+                  className="button orange"
+                  onClick={() => {
+                    downloadFile(recapSvg(state), 'tabs-anonymous-award.svg', 'image/svg+xml');
+                    setToast('Recap card saved. It contains no tab names or links.');
+                  }}
+                >
+                  <ArrowDownToLine size={17} /> Save recap card
+                </button>
+                <button className="button" onClick={downloadRecap}>
+                  Save text recap
                 </button>
                 <button className="button" onClick={restart}>
                   <RotateCcw size={16} /> Another session
                 </button>
               </div>
-              <small>Fictional comedy awards. Zero tabs closed.</small>
+              <small>Fictional comedy awards. The card includes no tab names or links.</small>
             </div>
             <div className="result-groups">
               <div className="eyebrow">
@@ -344,7 +373,7 @@ export function App({
             </div>
           </section>
         ) : (
-          <section className="workspace">
+          <section className={`workspace ${state.phase === 'voting' ? 'is-voting' : ''}`}>
             <div className="arena-panel">
               <div className="browser-strip">
                 <div className="window-dots">
@@ -481,7 +510,7 @@ export function App({
                 </div>
               </div>
             </div>
-            <aside className="dossier">
+            <aside className="dossier" aria-label="Character dossier">
               <div className="dossier-top">
                 <span className="eyebrow">ON THE COUCH</span>
                 <button
@@ -509,7 +538,7 @@ export function App({
                     <span className="portrait-star">✳</span>
                   </div>
                   <div className="dossier-name">
-                    <h2>{selected.name}</h2>
+                    <h2 title={selected.title}>{selected.name}</h2>
                     <span className="emotion-tag">{selected.emotion}</span>
                   </div>
                   <p className="character-role">{selected.role}</p>
@@ -521,86 +550,106 @@ export function App({
                     {selected.pinned && <span>⌖ Pinned</span>}
                     {selected.audible && <span>♫ Audible</span>}
                   </div>
-                  <div className="meters">
-                    <div>
-                      <span>
-                        Faith in you <b>{selected.loyalty}%</b>
-                      </span>
-                      <div className="meter">
-                        <i style={{ width: `${selected.loyalty}%`, background: '#88b39c' }} />
+                  {state.phase === 'voting' ? (
+                    <VotePanel
+                      state={state}
+                      paused={paused || !!modal}
+                      onDecide={decide}
+                      onNext={nextUndecided}
+                      onUndo={() => dispatch({ type: 'UNDO_DECISION' })}
+                      onFinish={() => dispatch({ type: 'FINISH' })}
+                    />
+                  ) : (
+                    <>
+                      <div className="meters">
+                        <div>
+                          <span>
+                            Faith in you <b>{selected.loyalty}%</b>
+                          </span>
+                          <div className="meter">
+                            <i style={{ width: `${selected.loyalty}%`, background: '#88b39c' }} />
+                          </div>
+                        </div>
+                        <div>
+                          <span>
+                            Main character energy <b>{selected.confidence}%</b>
+                          </span>
+                          <div className="meter">
+                            <i
+                              style={{ width: `${selected.confidence}%`, background: '#c7b4de' }}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <span>
-                        Main character energy <b>{selected.confidence}%</b>
-                      </span>
-                      <div className="meter">
-                        <i style={{ width: `${selected.confidence}%`, background: '#c7b4de' }} />
+                      <div className="evidence">
+                        <span className="tiny-label">THE RECEIPTS</span>
+                        <p>
+                          {duplicates.some((g) => g.includes(selected.id)) ? (
+                            <>
+                              <span>◫</span> Shares an address with another tab.
+                              <b>Suspicious? Very.</b>
+                            </>
+                          ) : selected.pinned ? (
+                            <>
+                              <span>⌖</span> Pinned. Protected from real actions.
+                              <b>“I’m literally management.”</b>
+                            </>
+                          ) : (
+                            <>
+                              <span>↳</span>
+                              {realMode
+                                ? new URL(selected.url).hostname
+                                : 'Part of the fictional demo cast.'}
+                              <b>
+                                {selected.audible
+                                  ? 'Currently providing the soundtrack.'
+                                  : 'Has a lot of unprocessed potential.'}
+                              </b>
+                            </>
+                          )}
+                        </p>
+                        {selected.allies.length > 0 && (
+                          <small>
+                            ♡ {selected.allies.length} allies in the productivity coalition
+                          </small>
+                        )}
                       </div>
-                    </div>
-                  </div>
-                  <div className="evidence">
-                    <span className="tiny-label">THE RECEIPTS</span>
-                    <p>
-                      {duplicates.some((g) => g.includes(selected.id)) ? (
-                        <>
-                          <span>◫</span> Shares an address with another tab.<b>Suspicious? Very.</b>
-                        </>
-                      ) : selected.pinned ? (
-                        <>
-                          <span>⌖</span> Pinned. Protected from real actions.
-                          <b>“I’m literally management.”</b>
-                        </>
-                      ) : (
-                        <>
-                          <span>↳</span>
-                          {realMode
-                            ? new URL(selected.url).hostname
-                            : 'Part of the fictional demo cast.'}
-                          <b>
-                            {selected.audible
-                              ? 'Currently providing the soundtrack.'
-                              : 'Has a lot of unprocessed potential.'}
-                          </b>
-                        </>
-                      )}
-                    </p>
-                    {selected.allies.length > 0 && (
-                      <small>♡ {selected.allies.length} allies in the productivity coalition</small>
-                    )}
-                  </div>
-                  <div className="dossier-actions">
-                    <button
-                      className="button microphone"
-                      disabled={!active || paused}
-                      onClick={() => dispatch({ type: 'SPEAK', id: selected.id })}
-                    >
-                      <Mic size={16} /> Give them the microphone
-                    </button>
-                    <div>
-                      <button
-                        className="button"
-                        disabled={!active || paused}
-                        onClick={() => dispatch({ type: 'DEFEND', id: selected.id })}
-                      >
-                        <Heart size={15} /> Defend
-                      </button>
-                      <button
-                        className="button"
-                        disabled={!active || paused}
-                        onClick={() => dispatch({ type: 'CHALLENGE', id: selected.id })}
-                      >
-                        <Zap size={15} /> Challenge
-                      </button>
-                    </div>
-                  </div>
+                      <div className="dossier-actions">
+                        <button
+                          className="button microphone"
+                          disabled={!active || paused}
+                          onClick={() => dispatch({ type: 'SPEAK', id: selected.id })}
+                        >
+                          <Mic size={16} /> Give them the microphone
+                        </button>
+                        <div>
+                          <button
+                            className="button"
+                            disabled={!active || paused}
+                            onClick={() => dispatch({ type: 'DEFEND', id: selected.id })}
+                          >
+                            <Heart size={15} /> Defend
+                          </button>
+                          <button
+                            className="button"
+                            disabled={!active || paused}
+                            onClick={() => dispatch({ type: 'CHALLENGE', id: selected.id })}
+                          >
+                            <Zap size={15} /> Challenge
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
               <div className="dossier-foot">
                 <span className="mini-live" />
-                {state.phase === 'lobby'
-                  ? 'Start therapy to hear their side.'
-                  : 'Click any character to hear their side.'}
+                {saved && active
+                  ? 'Progress saved in this tab · Restart to clear'
+                  : state.phase === 'lobby'
+                    ? 'Start therapy to hear their side.'
+                    : 'Click any character to hear their side.'}
               </div>
             </aside>
           </section>
@@ -622,6 +671,7 @@ export function App({
                 <button
                   key={c.id}
                   className={state.selected === c.id ? 'selected' : ''}
+                  title={c.title}
                   onClick={() => select(c.id)}
                 >
                   <i style={{ background: c.color }} />
@@ -629,75 +679,6 @@ export function App({
                   <small>{c.fate === 'undecided' ? c.role : c.fate}</small>
                 </button>
               ))}
-            </div>
-          </section>
-        )}
-        {state.phase === 'voting' && (
-          <section className="vote-panel" aria-label="Choose tab fate">
-            <div className="vote-heading">
-              <div className="eyebrow">THE FLOOR IS YOURS</div>
-              <h3>What’s the verdict for {selected?.name}?</h3>
-              <p>Drag a character here, or select one and use these buttons.</p>
-            </div>
-            <div className="vote-zones">
-              <button
-                data-fate="keep"
-                disabled={paused}
-                onClick={() => decide(state.selected, 'keep')}
-              >
-                <Star />
-                <span>
-                  <b>Keep in the spotlight</b>
-                  <small>{kept} / 6 seats filled</small>
-                </span>
-              </button>
-              <button
-                data-fate="group"
-                disabled={paused}
-                onClick={() => decide(state.selected, 'group')}
-              >
-                <Folder />
-                <span>
-                  <b>Find their people</b>
-                  <small>Group in the arena</small>
-                </span>
-              </button>
-              <button
-                data-fate="retire"
-                disabled={paused}
-                onClick={() => decide(state.selected, 'retire')}
-              >
-                <ArrowUpRight />
-                <span>
-                  <b>Retire from arena</b>
-                  <small>A safe seat in the balcony</small>
-                </span>
-              </button>
-            </div>
-            <div className="vote-footer">
-              <span>
-                {remaining
-                  ? `${remaining} tabs still need a verdict.`
-                  : 'Everyone has a place. You did it.'}{' '}
-                <b>All decisions are reversible before finishing.</b>
-              </span>
-              {remaining > 0 ? (
-                <button
-                  className="button"
-                  disabled={paused}
-                  onClick={() => select(state.characters.find((c) => c.fate === 'undecided')!.id)}
-                >
-                  Next undecided <ArrowRight size={15} />
-                </button>
-              ) : (
-                <button
-                  className="button orange"
-                  disabled={paused}
-                  onClick={() => dispatch({ type: 'FINISH' })}
-                >
-                  The awards ceremony <Sparkles size={16} />
-                </button>
-              )}
             </div>
           </section>
         )}
@@ -774,6 +755,9 @@ function InfoModal({
             <p>
               The demo uses fictional tab data and runs entirely in your browser. No accounts,
               analytics, AI requests, or page scraping. Your motion preference stays on this device.
+              Game progress, including tab titles and URLs in real mode, is saved in this browser
+              tab’s session storage so a reload can resume it. Checkpoints older than 24 hours are
+              not restored. Restart clears game progress.
             </p>
             <p>
               The optional extension reads tab titles, URLs, pinned state, and audible state only

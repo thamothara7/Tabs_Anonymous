@@ -13,6 +13,7 @@ Official implementation references:
 
 - [Motion React animation](https://motion.dev/docs/react-animation)
 - [Chrome Tabs API](https://developer.chrome.com/docs/extensions/reference/api/tabs)
+- [Playwright extension testing](https://playwright.dev/docs/chrome-extensions)
 - [Chrome optional permissions](https://developer.chrome.com/docs/extensions/reference/api/permissions)
 
 The source specification contains a broader reading list; no artwork or source code was copied from the referenced community projects.

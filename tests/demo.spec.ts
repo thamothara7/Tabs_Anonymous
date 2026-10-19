@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 test('complete demo, consequences, and recap', async ({ page }, info) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -31,8 +32,23 @@ test('complete demo, consequences, and recap', async ({ page }, info) => {
   await page.getByRole('button', { name: 'The awards ceremony' }).click();
   await expect(page.getByRole('heading', { name: 'The Betrayer', exact: true })).toBeVisible();
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Save recap' }).click();
+  await page.getByRole('button', { name: 'Save text recap' }).click();
   expect((await download).suggestedFilename()).toBe('tabs-anonymous-recap.txt');
+  const cardDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save recap card', exact: true }).click();
+  const card = await cardDownload;
+  expect(card.suggestedFilename()).toBe('tabs-anonymous-award.svg');
+  await card.saveAs(`artifacts/${info.project.name}-award.svg`);
+  if (info.project.name === 'desktop') {
+    const preview = await page.context().newPage();
+    await preview.setViewportSize({ width: 1200, height: 630 });
+    await preview.setContent(
+      '<style>body{margin:0}</style>' + (await readFile('artifacts/desktop-award.svg', 'utf8')),
+    );
+    await expect(preview.locator('svg')).toBeVisible();
+    await preview.locator('svg').screenshot({ path: 'artifacts/award-card.png' });
+    await preview.close();
+  }
   await page.screenshot({ path: `artifacts/${info.project.name}-results.png`, fullPage: true });
   expect(errors).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
@@ -80,4 +96,51 @@ test('dragging a tab into a fate zone works on a scrolled page', async ({ page }
   const zone = page.getByRole('button', { name: 'Keep in the spotlight' });
   await character.dragTo(zone);
   await expect(zone).toContainText('1 / 6');
+});
+test('voting stays reachable, supports undo, and survives reload', async ({ page }, info) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start therapy' }).click();
+  for (let i = 0; i < 10; i++) await page.getByRole('button', { name: 'Skip scene' }).click();
+  const panel = page.getByRole('region', { name: 'Choose tab fate' });
+  await expect(panel).toBeVisible();
+  if (info.project.name === 'mobile') {
+    const bounds = await panel.boundingBox();
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+  } else {
+    const theater = await page.getByTestId('theater').boundingBox();
+    const bounds = await panel.boundingBox();
+    expect(bounds!.x).toBeGreaterThan(theater!.x + theater!.width);
+  }
+  await page.getByRole('button', { name: 'Keep in the spotlight', exact: true }).click();
+  await page.reload();
+  await expect(panel).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Keep in the spotlight', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Undo last verdict' }).click();
+  await expect(page.getByRole('progressbar', { name: 'Verdicts completed' })).toHaveAttribute(
+    'aria-valuenow',
+    '0',
+  );
+  await panel.focus();
+  await page.keyboard.press('2');
+  await expect(
+    page.getByRole('button', { name: 'Find their people', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await page.screenshot({
+    path: `artifacts/${info.project.name}-phase-two-vote.png`,
+    fullPage: info.project.name !== 'mobile',
+  });
+});
+test('reload during a scene resumes paused and restarting clears progress', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start therapy' }).click();
+  await page.getByRole('button', { name: 'Skip scene' }).click();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Resume session' })).toBeVisible();
+  await expect(page.locator('.resume-banner')).toContainText('Session restored');
+  await page.getByRole('button', { name: 'Restart session' }).click();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Start therapy' })).toBeVisible();
 });

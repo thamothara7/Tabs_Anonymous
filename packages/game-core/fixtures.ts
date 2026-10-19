@@ -5,13 +5,15 @@ const looks: Record<Category, { color: string; symbol: string; role: string }> =
   study: { color: '#a6cfb4', symbol: '≡', role: 'The responsible one' },
   shopping: { color: '#f0ca7b', symbol: '袋', role: 'The impulse buy' },
   social: { color: '#eab2ce', symbol: '#', role: 'The oversharer' },
+  events: { color: '#eccb91', symbol: '★', role: 'The deadline optimist' },
+  design: { color: '#c5b2df', symbol: '✎', role: 'The visual thinker' },
   other: { color: '#9bcbd7', symbol: '✦', role: 'The mysterious one' },
 };
 export function makeCharacter(tab: TabFact, index: number): Character {
   return {
     ...tab,
     ...looks[tab.category],
-    name: tab.title.slice(0, 32),
+    name: tab.title,
     emotion: 'neutral',
     loyalty: 45 + (index % 4) * 8,
     confidence: 45 + (index % 5) * 9,

@@ -4,11 +4,13 @@ export function TabCharacter({
   speaking = false,
   emotion,
   compact = false,
+  gaze = 0,
 }: {
   character: Character;
   speaking?: boolean;
   emotion?: Emotion;
   compact?: boolean;
+  gaze?: number;
 }) {
   const face = emotion ?? character.emotion;
   const angry = face === 'angry';
@@ -66,6 +68,23 @@ export function TabCharacter({
         >
           {character.category === 'shopping' ? '$' : character.symbol}
         </text>
+        {character.category === 'events' && (
+          <g transform="translate(124 106) rotate(-12)">
+            <path d="M-7-6 8-6 10 18 0 13-9 19Z" fill="#ce744d" />
+            <circle r="12" fill="#fff2c5" stroke="#9a7842" strokeWidth="2" />
+            <text x="0" y="5" textAnchor="middle" fill="#9a7842" fontSize="14">
+              ★
+            </text>
+          </g>
+        )}
+        {character.category === 'design' && (
+          <g transform="translate(128 53) rotate(15)">
+            <path d="M-9-16v34l9 10 9-10v-34Z" fill="#ecc27b" stroke="#56516a" strokeWidth="2" />
+            <path d="m-9 18 9 10 9-10" fill="#fce9c7" />
+            <path d="M-2 24 0 28 3 24" fill="#34343e" />
+            <path d="M-3-14v31" stroke="#fff5cf" strokeWidth="3" />
+          </g>
+        )}
         {character.category === 'video' && (
           <path
             d="M41 71V60a49 49 0 0 1 98 0v11M40 65v18m100-18v18"
@@ -77,7 +96,7 @@ export function TabCharacter({
         <g className="eye-pair">
           <ellipse cx="68" cy="78" rx="13" ry={shocked ? 17 : 15} fill="#fff9ed" />
           <ellipse cx="111" cy="78" rx="13" ry={shocked ? 17 : 15} fill="#fff9ed" />
-          <g className="pupils">
+          <g className="pupils" style={{ transform: `translateX(${gaze * 3}px)` }}>
             <ellipse
               cx={face === 'suspicious' ? 73 : 70}
               cy="80"
