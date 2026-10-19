@@ -1,3 +1,4 @@
+import { VOICE_SERVER } from './voices';
 import type { Cue } from '../game-core/types';
 
 /** All effects are generated locally; speech uses installed device voices only. */
@@ -5,7 +6,74 @@ export class SessionAudio {
   private context: AudioContext | null = null;
   private nodes = new Set<OscillatorNode>();
   private utterance: SpeechSynthesisUtterance | null = null;
-  volume = 0.65;
+  private request: AbortController | null = null;
+  private player: HTMLAudioElement | null = null;
+  private objectUrl: string | null = null;
+  private generation = 0;
+  private level = 0.65;
+  get volume() {
+    return this.level;
+  }
+  set volume(value: number) {
+    this.level = Math.max(0, Math.min(1, value));
+    if (this.player) this.player.volume = this.level;
+  }
+  async speakCloud(
+    text: string,
+    voiceId: string,
+    emotion: string,
+    therapist: boolean,
+    done: () => void,
+    fail: (message: string) => void,
+  ) {
+    this.stop();
+    const generation = this.generation;
+    const controller = new AbortController();
+    this.request = controller;
+    const timeout = setTimeout(() => controller.abort(), 50000);
+    try {
+      const response = await fetch(`${VOICE_SERVER}/speech`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-TA-Client': '1' },
+        body: JSON.stringify({ text, voiceId, emotion, therapist }),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error ?? 'Speech generation failed.');
+      }
+      const blob = await response.blob();
+      if (generation !== this.generation) return;
+      this.objectUrl = URL.createObjectURL(blob);
+      const player = new Audio(this.objectUrl);
+      this.player = player;
+      player.volume = this.volume;
+      player.onended = () => {
+        if (generation === this.generation) {
+          this.stop();
+          done();
+        }
+      };
+      player.onerror = () => {
+        if (generation === this.generation) {
+          this.stop();
+          fail('Generated audio could not play. Use Replay line to retry.');
+        }
+      };
+      await player.play();
+    } catch (error) {
+      if (generation === this.generation) {
+        this.stop();
+        fail(
+          error instanceof Error && error.name !== 'AbortError'
+            ? error.message
+            : 'Voice request timed out. Replay the line to retry.',
+        );
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
   async unlock() {
     this.context ??= new AudioContext();
     if (this.context.state !== 'running') await this.context.resume();
@@ -50,7 +118,7 @@ export class SessionAudio {
       osc.stop(start + 0.24);
     });
   }
-  speak(text: string, voiceURI: string, pitch: number, onError: () => void) {
+  speak(text: string, voiceURI: string, pitch: number, onError: () => void, rate = 1) {
     this.cancelSpeech();
     const voice = this.voices().find((v) => v.voiceURI === voiceURI);
     if (!voice) return;
@@ -59,7 +127,7 @@ export class SessionAudio {
     utterance.voice = voice;
     utterance.lang = voice.lang;
     utterance.volume = this.volume;
-    utterance.rate = 1.08;
+    utterance.rate = rate;
     utterance.pitch = pitch;
     utterance.onerror = (e) => {
       if (!['canceled', 'interrupted'].includes(e.error)) onError();
@@ -75,6 +143,21 @@ export class SessionAudio {
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
   }
   stop() {
+    this.generation++;
+    this.request?.abort();
+    this.request = null;
+    if (this.player) {
+      this.player.onended = null;
+      this.player.onerror = null;
+      this.player.pause();
+      this.player.removeAttribute('src');
+      this.player.load();
+      this.player = null;
+    }
+    if (this.objectUrl) {
+      URL.revokeObjectURL(this.objectUrl);
+      this.objectUrl = null;
+    }
     this.cancelSpeech();
     this.nodes.forEach((n) => {
       try {

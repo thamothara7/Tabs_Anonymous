@@ -2,7 +2,7 @@
 
 **Your browser tabs have formed a support group. They’d like a word with you.**
 
-An animated, interactive tab therapy arena: twelve expressive characters confess, expose duplicates, form questionable alliances, and ask you to decide their fate. Phase three (v0.3.0) of the playable implementation of the [hackathon build spec](Tabs_Anonymous_Animated_Hackathon_Build_Spec.md).
+An animated, interactive tab therapy arena: twelve expressive characters confess, expose duplicates, form questionable alliances, and ask you to decide their fate. Phase four (v0.4.0) of the playable implementation of the [hackathon build spec](Tabs_Anonymous_Animated_Hackathon_Build_Spec.md).
 
 ![The waiting room](docs/screenshots/waiting-room.png)
 
@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173**. No credentials, extension, backend, or API key needed. The script runs for roughly two minutes before the player-led final vote; pause, skip, and interrupt at any time.
+Open **http://127.0.0.1:5173**. The silent demo and device-voice preview need no credentials. Expressive ElevenLabs voices require the optional local server and your API key. The script runs for roughly two minutes before the player-led final vote; pause, skip, and interrupt at any time.
 
 ## What works
 
@@ -28,13 +28,17 @@ Open **http://127.0.0.1:5173**. No credentials, extension, backend, or API key n
 - Tab-specific confessions and a rotating **Roast this tab** interaction that reacts to duplicates, category counts, and your decisions.
 - A readable balcony tray, uncluttered duplicate confrontations, expandable full titles, and outcome-based recaps with session highlights.
 - Eight character categories, metadata-aware authored dialogue, diverse casting, and full-title inspection for real tabs.
-- Desktop/mobile layouts, captions, pause/skip/restart, persisted reduced-motion preference, and optional sound effects plus installed local English voices.
+- Desktop/mobile layouts, captions, pause/skip/restart, persisted reduced-motion preference, and optional sound effects, ElevenLabs expressive voice casting, or device voice previews.
 - Optional Chrome MV3 extension: permission prompt, local snapshot, 12 featured representatives, explicit native grouping preview, per-tab approval, stale-tab checks, and partial-failure reporting.
-- Locally bundled fonts. No third-party runtime network requests, telemetry, scraping, or AI service.
+- Locally bundled fonts. No telemetry or page scraping. Optional ElevenLabs speech sends dialogue through a local voice server only when enabled.
 
 ![Voting beside the cast](docs/screenshots/final-vote.png)
 
 See the [mobile voting dock](docs/screenshots/voting-mobile.png), [native grouping preview](docs/screenshots/native-groups.png), and [shareable recap card](docs/screenshots/recap-card.png).
+
+## Expressive voices
+
+See [voice setup](docs/voices.md). Set the server-only key in `.env`, run `npm run voice:server`, and connect from Audio settings. The therapist has a reserved voice; tabs receive separate voices with emotional delivery cues. Missing cloud configuration is reported explicitly.
 
 ## Chrome extension
 
@@ -91,4 +95,4 @@ Native grouping now has an actual Chromium API test in a disposable profile with
 
 Reload resumes a saved game in the same browser tab. A story resumes paused from the start of its current beat, while final decisions and Undo history survive. Real-mode restore requires unchanged eligible tabs in the original window. Restart clears game progress; Forget session clears real snapshot metadata too. Browser-managed closed-tab recovery may retain sessionStorage.
 
-The PNG/SVG card is a static image, not an animated export. **Audio settings** provides volume, an installed-voice selector, and Test sound. Sound starts from a user click; no remote speech service is used. If no local English voice is available, effects and captions still work. Pause cancels speech; resuming with voices restarts the current sentence. Physical speaker output and Brave voice availability need a check on the target device. The entrance originates above the fictional strip rather than tracking each strip element with an exact shared-element transition.
+The PNG/SVG card is a static image, not an animated export. **Audio settings** provides volume, an installed-voice selector, and Test sound. Sound starts from a user click. ElevenLabs is opt-in through Connect; device speech remains a separate preview engine. Without cloud configuration or installed voices, captions and effects still work. Pause cancels speech; resuming with voices restarts the current sentence. Physical speaker output and Brave voice availability need a check on the target device. The entrance originates above the fictional strip rather than tracking each strip element with an exact shared-element transition.

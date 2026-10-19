@@ -88,7 +88,7 @@ export function reducer(state: GameState, action: GameAction): GameState {
       actionLine: null,
       actionCue: null,
       actionTarget: null,
-      history: [...state.history, beat.label],
+      history: [...state.history, beat.line].slice(-80),
     };
   }
   if (action.type === 'FINISH') {
@@ -127,7 +127,7 @@ export function reducer(state: GameState, action: GameAction): GameState {
         ...state.undoStack,
         { id: target.id, fate: target.fate, emotion: target.emotion },
       ].slice(-60),
-      history: [...state.history, reactionFor(state, target, action.fate)].slice(-40),
+      history: [...state.history, reactionFor(state, target, action.fate)].slice(-80),
     };
   }
   if (action.type === 'SPEAK' || action.type === 'ROAST')
@@ -138,7 +138,7 @@ export function reducer(state: GameState, action: GameAction): GameState {
       actionCue: action.type === 'ROAST' ? 'popcorn' : 'talk',
       actionSerial: state.actionSerial + 1,
       actionLine: reactionFor(state, target, action.type),
-      history: [...state.history, reactionFor(state, target, action.type)].slice(-40),
+      history: [...state.history, reactionFor(state, target, action.type)].slice(-80),
     };
   if (action.type === 'DEFEND' || action.type === 'CHALLENGE') {
     const defend = action.type === 'DEFEND';
@@ -158,7 +158,7 @@ export function reducer(state: GameState, action: GameAction): GameState {
       ),
       defended: defend ? [...new Set([...state.defended, target.id])] : state.defended,
       actionLine: reactionFor(state, target, action.type),
-      history: [...state.history, reactionFor(state, target, action.type)].slice(-40),
+      history: [...state.history, reactionFor(state, target, action.type)].slice(-80),
       actionCue: defend ? 'victory' : 'angry',
       actionSerial: state.actionSerial + 1,
     };

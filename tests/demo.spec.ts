@@ -13,9 +13,7 @@ test('complete demo, consequences, and recap', async ({ page }, info) => {
   await expect(page.getByRole('button', { name: 'Select LeetCode', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Defend', exact: true }).click();
   await expect(page.locator('.meters')).toContainText('60%');
-  await expect(page.locator('.caption-copy [role="status"]')).toContainText(
-    'You defended “LeetCode”',
-  );
+  await expect(page.locator('.caption-copy [role="status"]')).toContainText('LeetCode');
   await page.getByRole('button', { name: 'Skip scene' }).click();
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Skip scene' }).click();
   await expect(page.locator('.duplicate-stamp')).toBeVisible();
@@ -23,7 +21,7 @@ test('complete demo, consequences, and recap', async ({ page }, info) => {
   for (let i = 0; i < 7; i++) await page.getByRole('button', { name: 'Skip scene' }).click();
   await expect(page.getByRole('region', { name: 'Choose tab fate' })).toBeVisible();
   await page.getByRole('button', { name: 'Retire from arena' }).click();
-  await expect(page.locator('.caption-copy [role="status"]')).toContainText('VERY IMPORTANT TAB');
+  await expect(page.locator('.caption-copy [role="status"]')).toContainText('LeetCode');
   for (let i = 1; i < 12; i++) {
     await page.getByRole('button', { name: 'Next undecided' }).click();
     await page

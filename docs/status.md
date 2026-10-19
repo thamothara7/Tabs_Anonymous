@@ -1,4 +1,13 @@
-# Phase three — 19 October 2026 · v0.3.0
+# Phase four: 19 October 2026 · v0.4.0
+
+- Dedicated therapist casting, per-tab voice assignment, emotional ElevenLabs delivery, cancellable audio, playback-driven scene timing, and explicit local preview mode.
+- Server-only API key, optional loopback permission, exact origin allowlist, request limits, bounded memory cache, and setup documentation.
+- Larger session-aware dialogue pools avoid repeated punchlines across tabs and preserve memory on reload.
+- Row-bounded character art and independent labels, prominent therapist host, original extension PNG icons at 16/32/48/128, and vector replacements for emoji. Authored runtime copy has no em dashes.
+- Verification: 44 unit tests and 24 browser tests, including provider fixtures, native icon decoding, and desktop/mobile label collision checks. Two desktop-only cases are skipped on mobile.
+- Real ElevenLabs quality verification is pending local API-key setup. Provider behavior is tested with fixtures, not live paid requests.
+
+## Phase three : 19 October 2026 · v0.3.0
 
 ## Updated in this phase
 

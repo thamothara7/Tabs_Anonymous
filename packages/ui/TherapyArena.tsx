@@ -1,6 +1,6 @@
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { motion } from 'motion/react';
-import { ArrowUpRight, CirclePlay, Grip, Mic } from 'lucide-react';
+import { ArrowUpRight, CirclePlay, Grip, Mic, Heart } from 'lucide-react';
 import { shortTitle } from '../game-core/dialogue';
 import { TabCharacter } from './TabCharacter';
 import type { Beat, Character, Cue, GameState } from '../game-core/types';
@@ -86,12 +86,16 @@ export function TherapyArena({
             ONE TAB AT A TIME.<small>EST. FIVE MINUTES AGO</small>
           </div>
         </div>
-        <div className="exit-sign">ESC ↗</div>
+        <div className="exit-sign">
+          ESC <ArrowUpRight size={12} />
+        </div>
         <div className="room-board">
           <span>today’s agenda</span>
           <b>let. it. go.</b>
           <i>↳ emotionally, at least.</i>
-          <div className="board-doodle">♡</div>
+          <div className="board-doodle">
+            <Heart size={24} />
+          </div>
         </div>
         <div className="plant">
           <i />
@@ -180,7 +184,7 @@ export function TherapyArena({
                         : cue === 'retire'
                           ? 'WHY'
                           : cue === 'victory'
-                            ? '♡'
+                            ? '+'
                             : cue === 'angry'
                               ? '!!'
                               : cue === 'group'
@@ -193,7 +197,7 @@ export function TherapyArena({
                       {character.emotion === 'angry'
                         ? '!!'
                         : character.allies.includes(acting ?? '')
-                          ? '♡'
+                          ? '+'
                           : '?!'}
                     </span>
                   )}
@@ -205,7 +209,7 @@ export function TherapyArena({
                           ? 'balcony'
                           : character.fate === 'group'
                             ? 'grouped'
-                            : '★ safe'}
+                            : 'kept'}
                       </small>
                     )}
                   </span>

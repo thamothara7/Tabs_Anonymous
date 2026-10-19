@@ -107,7 +107,7 @@ export function decodeSession(
       history: Array.isArray(s.history)
         ? s.history
             .filter((line: unknown) => typeof line === 'string')
-            .slice(-40)
+            .slice(-80)
             .map((line: string) => line.slice(0, 500))
         : [],
       defended: s.defended,

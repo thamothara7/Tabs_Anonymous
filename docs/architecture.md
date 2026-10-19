@@ -31,7 +31,7 @@ SVG rigs keep body, shadow, limbs, pupils, brows, and mouth separate. CSS suppli
 
 ## Extension boundary
 
-The MV3 action opens an extension document. All authoritative state stays in that visible document, so no persistent service worker is needed. Permissions are requested only from the Connect button. Both titles and URLs remain on-device, and no page bodies, history, content scripts, or host permissions are used.
+The MV3 action opens an extension document. All authoritative state stays in that visible document, so no persistent service worker is needed. Permissions are requested only from the Connect button. Snapshots remain on-device, and no page bodies, history, or content scripts are used. The optional speech bridge has a separately requested loopback host permission; spoken lines may contain titles.
 
 A complete preflight runs before the first approved mutation. Every group is checked again immediately before its call. URLs, window, pinned/private status, and pending navigation are checked against the original snapshot. Chrome operations are inherently non-atomic: a tab could change between the final check and Chrome's operation, or later operations can fail. Successful group calls are recorded before naming, ensuring a naming failure does not hide an already-created group. On failure the loop stops and tells the user which groups succeeded. Reload to refresh before retrying.
 
@@ -56,3 +56,9 @@ Dialogue combines bounded titles, boundary-matched host jokes, category variants
 `SessionAudio` unlocks Web Audio on an explicit gesture, schedules cue-specific notes with gain envelopes, and releases nodes on completion. English voices are filtered to `localService`. Late voice discovery cannot restart the animation clock. Muting, pausing, opening a dialog, advancing, and unmounting cancel the old speech. Resuming with voices restarts the current sentence and its timer; without voices it resumes elapsed time. Sound remains optional and unavailable voices fall back to captions/effects.
 
 PNG export rasterizes the self-contained SVG locally at 1200×630. Both formats use only generic artwork, an ending, and aggregate counts. Long award names wrap onto two lines. Text export and on-screen highlights include titles and dialogue; native browser grouping remains separate.
+
+## Phase-four speech boundary
+
+The client casts one voice per actor and reserves the main voice for the therapist. Cloud speech uses a loopback-only Node server; the key never enters client code. The server calls ElevenLabs with controlled emotional tags. The client aborts obsolete fetches, stops the previous audio element, revokes object URLs, and guards completion callbacks with a generation counter. Scenes wait for cloud speech completion instead of running on a fixed speech estimate. Device synthesis is an explicitly selected preview engine.
+
+Character labels have fixed row space independent of the artwork. Dialogue selection filters recently used punchlines across the cast, with bounded history restored from checkpoints. The extension icons rasterize the existing SVG brand mark; generated PNG assets are committed and packaged without needing browser automation during a normal build.

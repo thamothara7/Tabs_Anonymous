@@ -1,12 +1,12 @@
 import type { Category, Character, TabFact } from './types';
 const looks: Record<Category, { color: string; symbol: string; role: string }> = {
   code: { color: '#c3b4f2', symbol: '</>', role: 'The overachiever' },
-  video: { color: '#f49a86', symbol: '▶', role: 'The distraction' },
+  video: { color: '#f49a86', symbol: '>', role: 'The distraction' },
   study: { color: '#a6cfb4', symbol: '≡', role: 'The responsible one' },
   shopping: { color: '#f0ca7b', symbol: '袋', role: 'The impulse buy' },
   social: { color: '#eab2ce', symbol: '#', role: 'The oversharer' },
-  events: { color: '#eccb91', symbol: '★', role: 'The deadline optimist' },
-  design: { color: '#c5b2df', symbol: '✎', role: 'The visual thinker' },
+  events: { color: '#eccb91', symbol: '*', role: 'The deadline optimist' },
+  design: { color: '#c5b2df', symbol: '/', role: 'The visual thinker' },
   other: { color: '#9bcbd7', symbol: '✦', role: 'The mysterious one' },
 };
 export function makeCharacter(tab: TabFact, index: number): Character {

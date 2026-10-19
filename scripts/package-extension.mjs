@@ -2,6 +2,7 @@ import { copyFileSync, mkdirSync, cpSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 copyFileSync('apps/chrome-extension/manifest.json', 'dist-extension/manifest.json');
 cpSync('public/licenses', 'dist-extension/licenses', { recursive: true });
+cpSync('public/icons', 'dist-extension/icons', { recursive: true });
 mkdirSync('artifacts', { recursive: true });
 rmSync('artifacts/tabs-anonymous-extension.zip', { force: true });
 // The unpacked directory is the cross-platform deliverable; zip is best effort.

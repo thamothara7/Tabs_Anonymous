@@ -122,7 +122,7 @@ function Extension() {
       <>
         <div className="extension-banner">
           LOCAL SESSION · {tabs.length} eligible tabs · {Math.min(tabs.length, 12)} featured
-          characters · tab metadata stays on this device
+          characters · local snapshot · cloud speech is optional
           <button onClick={forgetSession}>Forget session</button>
         </div>
         <App

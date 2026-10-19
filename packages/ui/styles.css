@@ -3452,3 +3452,199 @@ h1 em {
   display: block;
   color: #bccdb7;
 }
+/* The cast uses real rows. Labels are outside the scaled art and cannot hit the next row. */
+.theater:not(.cue-duplicate) .seat {
+  width: 22%;
+  height: 24%;
+  transform: translate(-50%, -50%);
+}
+.theater:not(.cue-duplicate) .seat .chair {
+  display: none;
+}
+.theater:not(.cue-duplicate) .seat .character {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+.theater:not(.cue-duplicate) .seat .character > .tab-rig {
+  width: auto;
+  height: calc(100% - 32px);
+  max-width: 100%;
+  flex: 0 1 auto;
+}
+.theater:not(.cue-duplicate) .character-name {
+  position: static;
+  top: auto;
+  font-size: 10px;
+  line-height: 1.3;
+  padding: 3px 6px;
+  width: 100%;
+  max-width: 170px;
+  min-height: 26px;
+  max-height: 29px;
+  flex: 0 0 29px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: block;
+}
+.theater:not(.cue-duplicate) .character-name small {
+  display: inline;
+  margin-left: 5px;
+}
+.theater:not(.is-lobby) {
+  min-height: 460px;
+}
+.theater .reaction-badge {
+  right: 10%;
+  top: 5%;
+}
+.therapist-host {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 20px;
+  background: #203638;
+  color: #f3ecd6;
+  border-bottom: 1px solid #53685e;
+}
+.therapist-host b {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+.therapist-host span {
+  font-size: 10px;
+  color: #becdb8;
+}
+.therapist-host small {
+  margin-left: auto;
+  font-size: 10px;
+  color: #d7dfc5;
+}
+.caption-panel {
+  position: relative;
+  padding-right: 52px;
+}
+.therapist-caption {
+  background: #edf0e4;
+  border-left: 4px solid #708c6c;
+}
+.replay-line {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+}
+.voice-studio {
+  border-top: 1px solid #d2dac9;
+  margin-top: 14px;
+  padding-top: 16px;
+}
+.voice-studio-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+.voice-studio select {
+  padding: 7px;
+  background: #fffef7;
+  color: #273430;
+  border: 1px solid #bdc8b2;
+  border-radius: 5px;
+  max-width: 100%;
+}
+.voice-studio .button {
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.cloud-setup p,
+.voice-studio > p {
+  font-size: 11px;
+  line-height: 1.6;
+}
+.cloud-setup small {
+  display: block;
+  padding: 10px 0;
+  overflow-wrap: anywhere;
+}
+.voice-cast-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+.voice-cast-row {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  border: 1px solid #d2dac9;
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 0;
+}
+.voice-cast-row label {
+  flex: 1;
+  min-width: 0;
+}
+.voice-cast-row b {
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.voice-cast-row small {
+  display: block;
+  margin: 4px 0 8px;
+  font-size: 10px;
+}
+.voice-cast-row select {
+  width: 100%;
+}
+.therapist-casting {
+  grid-column: 1/-1;
+  background: #e8eddf;
+  border-color: #97aa89;
+}
+.trophy > svg {
+  color: #e8c883;
+}
+@media (max-width: 760px) {
+  .theater:not(.is-lobby) {
+    height: 450px;
+    min-height: 450px;
+  }
+  .theater:not(.cue-duplicate) .character-name {
+    font-size: 8px;
+    padding: 3px;
+  }
+  .therapist-host {
+    padding: 10px 12px;
+  }
+  .therapist-host small {
+    display: none;
+  }
+  .voice-cast-list {
+    grid-template-columns: 1fr;
+  }
+}
+@media (min-width: 761px) {
+  .workspace {
+    align-items: start;
+  }
+  .dossier {
+    position: sticky;
+    top: 16px;
+  }
+}
+.exit-sign {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

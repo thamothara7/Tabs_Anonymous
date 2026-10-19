@@ -20,13 +20,13 @@ describe('personal dialogue and recap', () => {
     s = reducer(s, { type: 'ROAST', id: 'tab-0' });
     const first = s.actionLine;
     s = reducer(s, { type: 'ROAST', id: 'tab-0' });
-    expect(s.actionLine).toContain('duplicate');
+    expect(s.actionLine).toContain('LeetCode');
     expect(s.actionLine).not.toBe(first);
     expect(s.history).toHaveLength(2);
     s = reducer(s, { type: 'DEFEND', id: 'tab-0' });
-    expect(reactionFor(s, s.characters[0], 'retire')).toContain('You defended me');
+    expect(reactionFor(s, s.characters[0], 'retire')).toContain('LeetCode');
     expect(recapText(s)).toContain('SESSION HIGHLIGHTS');
-    expect(recapText(s)).toContain('duplicate');
+    expect(recapText(s)).toContain(first!);
     expect(recapText(s)).not.toContain('https://');
     expect(recapSvg(s)).not.toContain('LeetCode');
   });

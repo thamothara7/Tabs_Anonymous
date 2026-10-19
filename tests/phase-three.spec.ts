@@ -49,8 +49,8 @@ test('sound starts a real audio context and exposes volume and voice fallback', 
   expect(await page.evaluate(() => (window as any).__audio.at(-1).state)).toBe('running');
   await page.getByText('Audio settings', { exact: false }).first().click();
   await expect(page.getByLabel('Sound volume')).toHaveValue('65');
-  await expect(page.getByLabel('Local voice')).toBeVisible();
-  await page.getByLabel('Local voice').selectOption('off');
+  await expect(page.getByLabel('Speech engine')).toBeVisible();
+  await page.getByLabel('Speech engine').selectOption('off');
   await page.getByRole('button', { name: 'Test sound', exact: true }).click();
   await expect(page.locator('.audio-settings')).toContainText('Sound ready');
   await page.getByRole('button', { name: 'Sound on', exact: true }).click();
@@ -91,6 +91,8 @@ test('local dialogue speech stops on pause and mute and follows the selected roa
     });
   });
   await page.goto('/');
+  await page.getByText('Audio settings', { exact: false }).first().click();
+  await page.getByLabel('Speech engine').selectOption('local');
   await page.getByRole('button', { name: 'Start therapy' }).click();
   await page.getByRole('button', { name: 'Sound off', exact: true }).click();
   await expect

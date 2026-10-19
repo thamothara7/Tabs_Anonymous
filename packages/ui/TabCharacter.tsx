@@ -72,9 +72,7 @@ export function TabCharacter({
           <g transform="translate(124 106) rotate(-12)">
             <path d="M-7-6 8-6 10 18 0 13-9 19Z" fill="#ce744d" />
             <circle r="12" fill="#fff2c5" stroke="#9a7842" strokeWidth="2" />
-            <text x="0" y="5" textAnchor="middle" fill="#9a7842" fontSize="14">
-              ★
-            </text>
+            <path d="m0-8 2 5 6 .5-4.5 4 1.5 6L0 4-5 3l1-5-4-4 6-.5Z" fill="#9a7842" />
           </g>
         )}
         {character.category === 'design' && (

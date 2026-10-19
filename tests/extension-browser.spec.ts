@@ -43,6 +43,16 @@ test('native Chromium grouping, cancel, protected tabs, and reload recovery', as
     await pinned.goto('http://127.0.0.1:5173/?fixture=pinned');
     const arena = await context.newPage();
     await arena.goto(`chrome-extension://${id}/index.html#arena`);
+    expect(
+      await arena.evaluate(async () => {
+        const icon = chrome.runtime.getManifest().icons?.['32'];
+        if (!icon) return false;
+        const image = new Image();
+        image.src = chrome.runtime.getURL(icon);
+        await image.decode();
+        return image.naturalWidth === 32 && image.naturalHeight === 32;
+      }),
+    ).toBe(true);
     await arena.evaluate(async () => {
       const tabs = await chrome.tabs.query({});
       const pinned = tabs.find((t) => t.url?.includes('fixture=pinned'))!;

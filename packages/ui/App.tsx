@@ -29,6 +29,9 @@ import {
   VolumeX,
   X,
   Zap,
+  Trophy,
+  MessageSquare,
+  Star,
 } from 'lucide-react';
 import { demoCharacters } from '../game-core/fixtures';
 import { categoryNames, duplicateGroups } from '../game-core/classify';
@@ -40,6 +43,8 @@ import { TabCharacter } from './TabCharacter';
 import { recapSvg, recapText, downloadFile, downloadPng } from './recap';
 import { votingLine } from '../game-core/dialogue';
 import { SessionAudio, lineDuration } from './audio';
+import { VoiceStudio } from './VoiceStudio';
+import { autoCast, deliveryFor, loadVoiceCasting, type CastVoice } from './voices';
 import { VotePanel } from './VotePanel';
 import { loadSession, saveSession } from '../game-core/session';
 import { TherapyArena } from './TherapyArena';
@@ -77,7 +82,22 @@ export function App({
   );
   const [sound, setSound] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceURI, setVoiceURI] = useState('');
+  const [voiceMode, setVoiceMode] = useState<'cloud' | 'local' | 'off'>('cloud');
+  const [savedCasting] = useState(loadVoiceCasting);
+  const [cloudVoices, setCloudVoices] = useState<CastVoice[]>(savedCasting.voices);
+  const [cloudMap, setCloudMap] = useState<Record<string, string>>(() => ({
+    ...autoCast(savedCasting.voices, cast, savedCasting.map.therapist),
+    ...Object.fromEntries(
+      Object.entries(savedCasting.map).filter(
+        ([id]) => id === 'therapist' || cast.some((c) => c.id === id),
+      ),
+    ),
+  }));
+  const [localMap, setLocalMap] = useState<Record<string, string>>({});
+  const [voiceHold, setVoiceHold] = useState(false);
+  const [replay, setReplay] = useState(0);
+  const voiceMap = voiceMode === 'cloud' ? cloudMap : localMap;
+  const voiceURI = voiceMode === 'off' ? 'off' : (voiceMap.therapist ?? '');
   const [volume, setVolume] = useState(65);
   const [audioMessage, setAudioMessage] = useState('Enable sound to hear the cast.');
   const [exporting, setExporting] = useState(false);
@@ -101,7 +121,13 @@ export function App({
       ? votingLine(state)
       : (beat?.line ??
         `${cast.length} tabs walk into a support group. None of them think they’re the problem.`));
-  const speakerId = state.actionLine ? state.actionTarget : beat?.speaker;
+  const speakerId = state.actionLine
+    ? state.actionCue === 'popcorn'
+      ? 'therapist'
+      : state.actionTarget
+    : state.phase === 'voting'
+      ? 'therapist'
+      : beat?.speaker;
   const speaker = state.characters.find((c) => c.id === speakerId);
   const cue = state.actionCue ?? beat?.cue ?? 'talk';
   const round = state.phase === 'results' || state.phase === 'voting' ? 3 : state.beat >= 5 ? 2 : 1;
@@ -135,11 +161,18 @@ export function App({
     return () => d.cancelAll();
   }, [state.phase, state.beat, state.actionSerial, state.actionLine, active, beat, line]);
   useEffect(() => {
-    const stopped = paused || !!modal;
+    const stopped = paused || !!modal || voiceHold;
     if (stopped) director.current.pause();
     else {
       // Speech restarts the current sentence after an interruption; give it a full beat.
-      if (wasPaused.current && sound && voiceURI && voiceURI !== 'off' && active) {
+      if (
+        wasPaused.current &&
+        voiceMode === 'local' &&
+        sound &&
+        voiceURI &&
+        voiceURI !== 'off' &&
+        active
+      ) {
         director.current.play(lineDuration(line), setElapsed, () =>
           dispatch({ type: state.actionLine ? 'CLEAR_REACTION' : 'NEXT' }),
         );
@@ -147,7 +180,7 @@ export function App({
       director.current.resume();
     }
     wasPaused.current = stopped;
-  }, [paused, modal, sound, voiceURI, active, line, state.actionLine]);
+  }, [paused, modal, sound, voiceURI, active, line, state.actionLine, voiceHold, voiceMode]);
   useEffect(() => {
     try {
       localStorage.setItem('ta-motion-reduced', String(reduced));
@@ -164,7 +197,14 @@ export function App({
     const refresh = () => {
       const local = audio.current.voices();
       setVoices(local);
-      setVoiceURI((previous) => previous || local[0]?.voiceURI || '');
+      setLocalMap((previous) =>
+        Object.keys(previous).length
+          ? previous
+          : autoCast(
+              local.map((v) => ({ id: v.voiceURI, name: v.name })),
+              cast,
+            ),
+      );
     };
     refresh();
     if (typeof speechSynthesis !== 'undefined')
@@ -174,6 +214,16 @@ export function App({
         speechSynthesis.removeEventListener('voiceschanged', refresh);
     };
   }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'ta-cloud-casting-v1',
+        JSON.stringify({ voices: cloudVoices, map: cloudMap }),
+      );
+    } catch {
+      /* Optional preferences. */
+    }
+  }, [cloudVoices, cloudMap]);
   useEffect(() => {
     audio.current.volume = volume / 100;
   }, [volume]);
@@ -185,17 +235,42 @@ export function App({
     }
     if (!active) return;
     engine.effect(cue);
-    if (voiceURI && voiceURI !== 'off')
+    const assigned = voiceMap[speakerId ?? 'therapist'];
+    const delivery = deliveryFor(speaker, cue);
+    if (voiceMode === 'cloud') {
+      if (!assigned) {
+        setAudioMessage('Connect ElevenLabs in Audio settings to enable expressive speech.');
+        return;
+      }
+      setVoiceHold(true);
+      setAudioMessage(`Speaking: ${speaker?.name ?? 'The therapist'}. ${delivery.label}.`);
+      void engine.speakCloud(
+        line,
+        assigned,
+        delivery.emotion,
+        !speaker,
+        () => {
+          setVoiceHold(false);
+          if (state.phase === 'playing' || state.actionLine) director.current.skipCurrent();
+        },
+        (message) => {
+          setVoiceHold(false);
+          setAudioMessage(message);
+        },
+      );
+    } else if (voiceMode === 'local' && assigned) {
       engine.speak(
         line,
-        voiceURI,
-        speaker ? 0.9 + (state.characters.findIndex((c) => c.id === speakerId) % 4) * 0.12 : 0.9,
-        () =>
-          setAudioMessage(
-            'Voice playback failed. Try another installed voice. Sound effects are still available.',
-          ),
+        assigned,
+        delivery.pitch,
+        () => setAudioMessage('Device voice failed. Choose another voice or connect ElevenLabs.'),
+        delivery.rate,
       );
-    return () => engine.stop();
+    }
+    return () => {
+      engine.stop();
+      setVoiceHold(false);
+    };
   }, [
     state.phase,
     state.beat,
@@ -207,6 +282,9 @@ export function App({
     paused,
     modal,
     voiceURI,
+    voiceMode,
+    voiceMap,
+    replay,
     speakerId,
   ]);
   useEffect(() => () => audio.current.dispose(), []);
@@ -240,7 +318,7 @@ export function App({
       await audio.current.unlock();
       audio.current.effect('victory');
       setSound(true);
-      setAudioMessage('Sound ready. Test it below or choose a local voice.');
+      setAudioMessage('Sound ready. Choose your voice cast below.');
       return true;
     } catch {
       setSound(false);
@@ -369,7 +447,7 @@ export function App({
             <div className="results-art">
               <span className="eyebrow">THE UNOFFICIAL TAB AWARDS</span>
               <div className="trophy" aria-hidden="true">
-                🏆
+                <Trophy size={78} strokeWidth={1.4} />
               </div>
               <h2>{ending.title}</h2>
               <p>{ending.description}</p>
@@ -498,6 +576,16 @@ export function App({
                   <MoreHorizontal size={18} />
                 </button>
               </div>
+              <div className="therapist-host">
+                <Mic size={18} />
+                <div>
+                  <b>The therapist</b>
+                  <span>Your host. One voice at a time.</span>
+                </div>
+                <small>
+                  {!speaker && active ? 'Leading the session' : 'Listening to the cast'}
+                </small>
+              </div>
               <TherapyArena
                 state={state}
                 beat={beat}
@@ -509,7 +597,15 @@ export function App({
                 onDrop={drop}
                 onDragChange={setDragging}
               />
-              <div className="caption-panel">
+              <div className={`caption-panel ${!speaker ? 'therapist-caption' : ''}`}>
+                <button
+                  className="replay-line icon-button"
+                  aria-label="Replay line"
+                  disabled={!sound || !active}
+                  onClick={() => setReplay((n) => n + 1)}
+                >
+                  <RotateCcw size={15} />
+                </button>
                 <div className="caption-avatar">
                   {speaker ? (
                     <TabCharacter character={speaker} compact />
@@ -532,6 +628,7 @@ export function App({
                   </div>
                   <p aria-hidden="true">
                     {reduced ||
+                    voiceHold ||
                     state.phase === 'lobby' ||
                     (state.phase === 'voting' && !state.actionLine)
                       ? line
@@ -560,7 +657,7 @@ export function App({
                     disabled={paused || !!modal}
                     onClick={() => dispatch({ type: 'ROAST', id: selected.id })}
                   >
-                    🍿 Roast this tab
+                    <MessageSquare size={15} /> Roast this tab
                   </button>
                 </div>
               )}
@@ -626,8 +723,10 @@ export function App({
                   Audio settings{' '}
                   <span>
                     {sound
-                      ? voices.length && voiceURI !== 'off'
-                        ? 'Effects + local voice'
+                      ? voiceMode !== 'off' && voiceURI
+                        ? voiceMode === 'cloud'
+                          ? 'ElevenLabs cast'
+                          : 'Device cast'
                         : 'Effects only'
                       : 'Muted'}
                   </span>
@@ -645,47 +744,60 @@ export function App({
                     />
                     <output>{volume}%</output>
                   </label>
-                  <label>
-                    Voice{' '}
-                    <select
-                      aria-label="Local voice"
-                      value={voiceURI}
-                      onChange={(e) => setVoiceURI(e.target.value)}
-                    >
-                      <option value="off">Effects only</option>
-                      {!voices.length && <option value="">No installed English voice</option>}
-                      {voices.map((v) => (
-                        <option key={v.voiceURI} value={v.voiceURI}>
-                          {v.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    className="button"
-                    onClick={async () => {
-                      if (await enableAudio()) {
-                        audio.current.speak(
-                          'Testing. One, two. Is this thing emotionally available?',
-                          voiceURI,
-                          1,
-                          () => setAudioMessage('Voice unavailable. Try another installed voice.'),
-                        );
-                      }
-                    }}
-                  >
+                  <button className="button" onClick={() => void enableAudio()}>
                     Test sound
                   </button>
                 </div>
-                <p role="status">
-                  {audioMessage}{' '}
-                  {!voices.length &&
-                    'No local English voice found; captions and effects remain available.'}
-                </p>
-                <small>
-                  Uses voices installed on this device. Check your tab and system volume if the test
-                  is silent.
-                </small>
+                <VoiceStudio
+                  cast={cast}
+                  localVoices={voices}
+                  mode={voiceMode}
+                  setMode={setVoiceMode}
+                  mapping={voiceMap}
+                  setMapping={voiceMode === 'cloud' ? setCloudMap : setLocalMap}
+                  cloudVoices={cloudVoices}
+                  setCloudVoices={setCloudVoices}
+                  status={audioMessage}
+                  onPreview={(id) => {
+                    setPaused(true);
+                    void audio.current
+                      .unlock()
+                      .then(
+                        () =>
+                          new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+                      )
+                      .then(() => {
+                        const c = state.characters.find((c) => c.id === id);
+                        const text = c
+                          ? `I am ${c.name}. I have a perfectly reasonable explanation for all of this.`
+                          : 'Welcome. Take a breath. I run this room, and every tab will get its turn.';
+                        if (voiceMode === 'cloud') {
+                          setVoiceHold(true);
+                          void audio.current.speakCloud(
+                            text,
+                            voiceMap[id],
+                            c?.emotion ?? 'neutral',
+                            id === 'therapist',
+                            () => setVoiceHold(false),
+                            (message) => {
+                              setVoiceHold(false);
+                              setAudioMessage(message);
+                            },
+                          );
+                        } else
+                          audio.current.speak(
+                            text,
+                            voiceMap[id],
+                            id === 'therapist' ? 0.93 : 1,
+                            () => setAudioMessage('Could not preview this voice.'),
+                            id === 'therapist' ? 0.94 : 1,
+                          );
+                      })
+                      .catch(() =>
+                        setAudioMessage('Could not start voice preview. Check audio permissions.'),
+                      );
+                  }}
+                />
               </details>
             </div>
             <aside className="dossier" aria-label="Character dossier">
@@ -713,7 +825,7 @@ export function App({
                           : 'seems well adjusted.'}
                     </span>
                     <TabCharacter character={selected} />
-                    <span className="portrait-star">✳</span>
+                    <Star className="portrait-star" size={18} />
                   </div>
                   <div className="dossier-name">
                     <h2 title={selected.title}>{selected.name}</h2>
@@ -730,7 +842,11 @@ export function App({
                       {categoryNames[selected.category]}
                     </span>
                     {selected.pinned && <span>⌖ Pinned</span>}
-                    {selected.audible && <span>♫ Audible</span>}
+                    {selected.audible && (
+                      <span>
+                        <Volume2 size={12} /> Audible
+                      </span>
+                    )}
                   </div>
                   {state.phase === 'voting' ? (
                     <VotePanel
@@ -792,7 +908,8 @@ export function App({
                         </p>
                         {selected.allies.length > 0 && (
                           <small>
-                            ♡ {selected.allies.length} allies in the productivity coalition
+                            <Heart size={12} /> {selected.allies.length} allies in the productivity
+                            coalition
                           </small>
                         )}
                       </div>
@@ -882,7 +999,7 @@ export function App({
           <button onClick={() => setModal('privacy')}>Privacy, please</button>
           <i>·</i>
           <span>
-            Made with too many tabs open <span className="heart">♡</span>
+            Made with too many tabs open <Heart className="heart" size={12} />
           </span>
         </div>
       </footer>
@@ -935,16 +1052,22 @@ function InfoModal({
         {kind === 'privacy' ? (
           <>
             <p>
-              The demo uses fictional tab data and runs entirely in your browser. No accounts,
-              analytics, AI requests, or page scraping. Your motion preference stays on this device.
-              Game progress, including tab titles and URLs in real mode, is saved in this browser
-              tab’s session storage so a reload can resume it. Checkpoints older than 24 hours are
-              not restored. Restart clears game progress.
+              The game uses fictional demo data or a local tab snapshot. No analytics or page
+              scraping. Your motion preference stays on this device. Game progress, including tab
+              titles and URLs in real mode, is saved in this browser tab’s session storage so a
+              reload can resume it. Checkpoints older than 24 hours are not restored. Restart clears
+              game progress.
             </p>
             <p>
               The optional extension reads tab titles, URLs, pinned state, and audible state only
               after you grant permission. It processes these locally and excludes private windows,
               pinned tabs, and internal pages from grouping.
+            </p>
+            <p>
+              Optional ElevenLabs voices send spoken lines, including tab titles, through your local
+              voice server to ElevenLabs. The API key stays in the server environment file. Provider
+              retention and charges apply. Device voice preview stays local. Voice assignments are
+              saved on this device.
             </p>
             <p>
               Arena retirements are fiction. Real tab grouping requires a separate preview and an
