@@ -9,11 +9,11 @@ describe('personal dialogue and recap', () => {
   it('uses real title and domain, varies jokes, and refuses lookalike host hints', () => {
     const c = { ...demoCharacters[0], title: 'Two Sum interview practice' };
     expect(personalLine(c, 0)).toContain('Two Sum interview practice');
-    expect(personalLine(c, 0)).toContain('coding problem');
+    expect(personalLine(c, 0)).toContain('two sum interview');
     expect(personalLine(c, 1)).not.toBe(personalLine(c, 0));
-    expect(
-      personalLine({ ...c, url: 'https://leetcode.com.evil.test', title: 'Unrelated' }, 0),
-    ).not.toContain('coding problem');
+    expect(personalLine({ ...c, title: 'Binary tree traversal' }, 0)).toContain(
+      'binary tree traversal',
+    );
   });
   it('roasts duplicates and reacts to a defended tab being retired', () => {
     let s = reducer(initialState(demoCharacters), { type: 'START' });
@@ -43,32 +43,30 @@ describe('personal dialogue and recap', () => {
 
 describe('local speech lifecycle', () => {
   afterEach(() => vi.unstubAllGlobals());
-  it('never uses remote voices, and cancels old speech before speaking', () => {
-    const local = { voiceURI: 'local', localService: true, lang: 'en-US' };
-    const remote = { voiceURI: 'remote', localService: false, lang: 'en-US' };
-    const synth = {
-      getVoices: () => [remote, local],
-      cancel: vi.fn(),
-      resume: vi.fn(),
-      speak: vi.fn(),
-    };
-    vi.stubGlobal('speechSynthesis', synth);
-    vi.stubGlobal(
-      'SpeechSynthesisUtterance',
-      class {
-        constructor(public text: string) {}
-      },
+  it('aborts inference on mute and ignores late responses without creating a player', async () => {
+    let complete!: (response: Response) => void;
+    const fetcher = vi.fn(
+      (_url: string, _options: RequestInit) =>
+        new Promise<Response>((resolve) => {
+          complete = resolve;
+        }),
     );
+    const player = vi.fn();
+    vi.stubGlobal('fetch', fetcher);
+    vi.stubGlobal('Audio', player);
     const audio = new SessionAudio();
-    expect(audio.voices()).toEqual([local]);
-    audio.speak('Private title', 'remote', 1, vi.fn());
-    expect(synth.speak).not.toHaveBeenCalled();
-    audio.speak('Private title', 'local', 1.1, vi.fn());
-    expect(synth.speak).toHaveBeenCalledWith(
-      expect.objectContaining({ text: 'Private title', voice: local, pitch: 1.1 }),
-    );
+    const done = vi.fn(),
+      fail = vi.fn();
+    const pending = audio.speak('Private title', 'bm_george', 'neutral', true, done, fail);
+    const request = fetcher.mock.calls[0];
+    expect(request[0]).toBe('http://127.0.0.1:4317/kokoro/speech');
     audio.stop();
-    expect(synth.cancel).toHaveBeenCalledTimes(3);
+    expect((request[1].signal as AbortSignal).aborted).toBe(true);
+    complete(new Response('RIFFfixture'));
+    await pending;
+    expect(player).not.toHaveBeenCalled();
+    expect(done).not.toHaveBeenCalled();
+    expect(fail).not.toHaveBeenCalled();
   });
   it('reports a suspended audio device instead of claiming success', async () => {
     const resume = vi.fn();

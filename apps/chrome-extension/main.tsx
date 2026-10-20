@@ -21,6 +21,7 @@ if (!inArena) document.body.classList.add('extension-popup');
 function Extension() {
   const [tabs, setTabs] = useState<TabFact[] | null>(null);
   const [windowId, setWindowId] = useState<number | null>(null);
+  const [revision, setRevision] = useState(0);
   const [demo, setDemo] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -102,6 +103,7 @@ function Extension() {
       }
       setWindowId(window.id);
       setTabs(data);
+      setRevision((n) => n + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not connect. Try the demo.');
     } finally {
@@ -122,10 +124,25 @@ function Extension() {
       <>
         <div className="extension-banner">
           LOCAL SESSION · {tabs.length} eligible tabs · {Math.min(tabs.length, 12)} featured
-          characters · local snapshot · cloud speech is optional
-          <button onClick={forgetSession}>Forget session</button>
+          characters · local dialogue and Kokoro voices
+          <button
+            disabled={busy}
+            onClick={() => void connect()}
+            title="Read the tabs open now and start a new session. Current verdicts will reset."
+          >
+            {busy ? 'Refreshing…' : 'Refresh cast and restart'}
+          </button>
+          <button disabled={busy} onClick={forgetSession}>
+            Forget session
+          </button>
         </div>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
         <App
+          key={revision}
           cast={cast}
           realMode
           integration={<GroupPreview tabs={tabs} windowId={windowId} port={port} />}

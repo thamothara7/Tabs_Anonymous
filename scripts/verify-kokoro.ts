@@ -1,14 +1,10 @@
-/** Optional integration check. Requires voice:setup; never calls ElevenLabs. */
+/** Optional integration check. Requires voice:setup; uses only local Kokoro. */
 import { mkdir, writeFile } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
 import { createVoiceServer } from '../apps/voice-server/server.ts';
 const origin = 'http://127.0.0.1:4173';
 const server = createVoiceServer({
-  key: '',
   origins: [origin],
-  fetcher: async () => {
-    throw new Error('Cloud request forbidden during offline verification');
-  },
 });
 await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;

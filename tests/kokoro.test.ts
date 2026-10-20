@@ -1,7 +1,7 @@
 import { it, expect, vi } from 'vitest';
 import type { AddressInfo } from 'node:net';
 import { createVoiceServer } from '../apps/voice-server/server';
-import { autoCast, KOKORO_VOICES, deliveryFor, previewLine } from '../packages/ui/voices';
+import { autoCast, KOKORO_VOICES, deliveryFor } from '../packages/ui/voices';
 import { demoCharacters } from '../packages/game-core/fixtures';
 
 it('reserves George, gives all twelve tabs different voices, and keeps identities when reordered', () => {
@@ -11,23 +11,15 @@ it('reserves George, gives all twelve tabs different voices, and keeps identitie
   expect(autoCast(KOKORO_VOICES, [...demoCharacters].reverse())).toEqual(cast);
   expect(deliveryFor(demoCharacters[0], 'angry').emotion).toBe('angry');
   expect(deliveryFor(demoCharacters[0], 'victory').emotion).toBe('victorious');
-  expect(previewLine(demoCharacters[0], 'angry')).not.toBe(
-    previewLine(demoCharacters[0], 'crying'),
-  );
 });
 it('serves local voices and WAV reactions without a key or cloud request, validates voices, and caches by emotion', async () => {
-  const upstream = vi.fn(() => {
-    throw new Error('Cloud must not be called');
-  });
   const local = {
     voices: vi.fn(async () => KOKORO_VOICES),
     speak: vi.fn(async (_input: unknown, _signal: AbortSignal) => Buffer.from('RIFFfixture')),
     close: vi.fn(),
   };
   const server = createVoiceServer({
-    key: '',
     kokoro: local,
-    fetcher: upstream,
     origins: ['http://127.0.0.1:4173'],
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -67,7 +59,24 @@ it('serves local voices and WAV reactions without a key or cloud request, valida
       body: JSON.stringify({ text: 'hi', voiceId: 'unknown', emotion: 'neutral' }),
     });
     expect(invalid.status).toBe(400);
-    expect(upstream).not.toHaveBeenCalled();
+    expect((await fetch(base + '/voices', { headers })).status).toBe(404);
+    expect((await fetch(base + '/speech', { method: 'POST', headers, body: '{}' })).status).toBe(
+      404,
+    );
+    expect(
+      (
+        await fetch(base + '/kokoro/voices', {
+          headers: { ...headers, Origin: 'https://untrusted.test' },
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (await fetch(base + '/kokoro/voices', { headers: { Origin: headers.Origin } })).status,
+    ).toBe(403);
+    expect(await (await fetch(base + '/health', { headers })).json()).toEqual({
+      engine: 'kokoro',
+      offline: true,
+    });
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }

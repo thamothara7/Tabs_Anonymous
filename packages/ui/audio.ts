@@ -1,11 +1,10 @@
 import { VOICE_SERVER } from './voices';
 import type { Cue } from '../game-core/types';
 
-/** All effects are generated locally; speech uses an explicitly selected local or cloud engine. */
+/** All effects are generated locally; speech uses Kokoro on this computer. */
 export class SessionAudio {
   private context: AudioContext | null = null;
   private nodes = new Set<OscillatorNode>();
-  private utterance: SpeechSynthesisUtterance | null = null;
   private request: AbortController | null = null;
   private player: HTMLAudioElement | null = null;
   private objectUrl: string | null = null;
@@ -18,31 +17,27 @@ export class SessionAudio {
     this.level = Math.max(0, Math.min(1, value));
     if (this.player) this.player.volume = this.level;
   }
-  async speakCloud(
+  async speak(
     text: string,
     voiceId: string,
     emotion: string,
     therapist: boolean,
     done: () => void,
     fail: (message: string) => void,
-    engine: 'cloud' | 'kokoro' = 'cloud',
     started: () => void = () => {},
   ) {
     this.stop();
     const generation = this.generation;
     const controller = new AbortController();
     this.request = controller;
-    const timeout = setTimeout(() => controller.abort(), engine === 'kokoro' ? 125000 : 50000);
+    const timeout = setTimeout(() => controller.abort(), 125000);
     try {
-      const response = await fetch(
-        `${VOICE_SERVER}${engine === 'kokoro' ? '/kokoro' : ''}/speech`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-TA-Client': '1' },
-          body: JSON.stringify({ text, voiceId, emotion, therapist }),
-          signal: controller.signal,
-        },
-      );
+      const response = await fetch(`${VOICE_SERVER}/kokoro/speech`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-TA-Client': '1' },
+        body: JSON.stringify({ text, voiceId, emotion, therapist }),
+        signal: controller.signal,
+      });
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error ?? 'Speech generation failed.');
@@ -85,11 +80,6 @@ export class SessionAudio {
     if (this.context.state !== 'running') await this.context.resume();
     if (this.context.state !== 'running') throw new Error('Audio is suspended');
   }
-  voices() {
-    return typeof speechSynthesis === 'undefined'
-      ? []
-      : speechSynthesis.getVoices().filter((v) => v.localService && /^en(?:-|$)/i.test(v.lang));
-  }
   effect(cue: Cue = 'talk') {
     const ctx = this.context;
     if (!ctx || ctx.state !== 'running') return;
@@ -124,30 +114,6 @@ export class SessionAudio {
       osc.stop(start + 0.24);
     });
   }
-  speak(text: string, voiceURI: string, pitch: number, onError: () => void, rate = 1) {
-    this.cancelSpeech();
-    const voice = this.voices().find((v) => v.voiceURI === voiceURI);
-    if (!voice) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    this.utterance = utterance;
-    utterance.voice = voice;
-    utterance.lang = voice.lang;
-    utterance.volume = this.volume;
-    utterance.rate = rate;
-    utterance.pitch = pitch;
-    utterance.onerror = (e) => {
-      if (!['canceled', 'interrupted'].includes(e.error)) onError();
-    };
-    speechSynthesis.resume();
-    speechSynthesis.speak(utterance);
-  }
-  cancelSpeech() {
-    if (this.utterance) {
-      this.utterance.onerror = null;
-      this.utterance = null;
-    }
-    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
-  }
   stop() {
     this.generation++;
     this.request?.abort();
@@ -164,7 +130,6 @@ export class SessionAudio {
       URL.revokeObjectURL(this.objectUrl);
       this.objectUrl = null;
     }
-    this.cancelSpeech();
     this.nodes.forEach((n) => {
       try {
         n.stop();

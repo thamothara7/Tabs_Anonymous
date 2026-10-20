@@ -65,7 +65,7 @@ export type GameAction =
   | { type: 'START' }
   | { type: 'NEXT' }
   | { type: 'SELECT'; id: string }
-  | { type: 'DEFEND' | 'CHALLENGE' | 'SPEAK' | 'ROAST'; id: string }
+  | { type: 'DEFEND' | 'CHALLENGE' | 'SPEAK' | 'ROAST' | 'WITNESS'; id: string }
   | { type: 'DECIDE'; id: string; fate: Fate }
   | { type: 'FINISH' }
   | { type: 'UNDO_DECISION' }

@@ -106,6 +106,23 @@ test('native Chromium grouping, cancel, protected tabs, and reload recovery', as
     await expect(arena.getByRole('button', { name: 'Connect this window' })).toBeVisible();
     await arena.getByRole('button', { name: 'Connect this window' }).click();
     await arena.getByRole('button', { name: 'Start therapy' }).click();
+    // Explicit refresh captures newly opened tabs and clears fictional verdicts.
+    const newcomer = await context.newPage();
+    await newcomer.goto('http://127.0.0.1:4173/?fixture=newcomer');
+    await newcomer.evaluate(() => {
+      document.title = 'Rust ownership workshop';
+    });
+    await arena.getByRole('button', { name: 'Refresh cast and restart' }).click();
+    await expect(arena.locator('.extension-banner')).toContainText('3 eligible tabs');
+    await expect(arena.getByRole('button', { name: 'Start therapy' })).toBeVisible();
+    await arena.getByRole('button', { name: 'Start therapy' }).click();
+    await arena
+      .getByRole('button', { name: 'Select Rust ownership workshop', exact: true })
+      .click();
+    await arena.getByRole('button', { name: 'Hear their excuse' }).click();
+    await expect(arena.locator('.caption-copy [role="status"]')).toContainText(
+      'Rust ownership workshop',
+    );
     await arena.getByRole('button', { name: 'Forget session' }).click();
     await expect(arena.getByRole('button', { name: 'Connect this window' })).toBeVisible();
     expect(

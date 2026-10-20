@@ -1,4 +1,4 @@
-import { reactionFor } from './dialogue';
+import { reactionFor, witnessFor } from './dialogue';
 import { storyFor } from './events';
 import { duplicateGroups } from './classify';
 import type { Character, GameAction, GameState } from './types';
@@ -128,6 +128,22 @@ export function reducer(state: GameState, action: GameAction): GameState {
         { id: target.id, fate: target.fate, emotion: target.emotion },
       ].slice(-60),
       history: [...state.history, reactionFor(state, target, action.fate)].slice(-80),
+    };
+  }
+  if (action.type === 'WITNESS') {
+    const witness = witnessFor(state, target);
+    if (!witness) return state;
+    return {
+      ...state,
+      selected: target.id,
+      actionTarget: witness.speaker.id,
+      actionCue: 'talk',
+      actionSerial: state.actionSerial + 1,
+      actionLine: witness.line,
+      characters: state.characters.map((c) =>
+        c.id === witness.speaker.id ? { ...c, emotion: 'suspicious' } : c,
+      ),
+      history: [...state.history, witness.line].slice(-80),
     };
   }
   if (action.type === 'SPEAK' || action.type === 'ROAST')

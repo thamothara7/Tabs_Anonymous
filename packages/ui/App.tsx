@@ -41,19 +41,9 @@ import type { Character, Fate } from '../game-core/types';
 import { AnimationDirector } from '../animation/director';
 import { TabCharacter } from './TabCharacter';
 import { recapSvg, recapText, downloadFile, downloadPng } from './recap';
-import { votingLine } from '../game-core/dialogue';
+import { votingLine, shortTitle } from '../game-core/dialogue';
 import { SessionAudio, lineDuration } from './audio';
-import { VoiceStudio } from './VoiceStudio';
-import {
-  autoCast,
-  deliveryFor,
-  previewLine,
-  loadVoiceCasting,
-  KOKORO_VOICES,
-  ensureVoicePermission,
-  type VoiceMode,
-  type CastVoice,
-} from './voices';
+import { autoCast, deliveryFor, KOKORO_VOICES, connectKokoro } from './voices';
 import { VotePanel } from './VotePanel';
 import { loadSession, saveSession } from '../game-core/session';
 import { TherapyArena } from './TherapyArena';
@@ -91,31 +81,16 @@ export function App({
     ),
   );
   const [sound, setSound] = useState(false);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceMode, setVoiceMode] = useState<VoiceMode>('kokoro');
-  const [savedCasting] = useState(() => loadVoiceCasting());
-  const [cloudVoices, setCloudVoices] = useState<CastVoice[]>(savedCasting.voices);
-  const [cloudMap, setCloudMap] = useState<Record<string, string>>(() => ({
-    ...autoCast(savedCasting.voices, cast, savedCasting.map.therapist),
-    ...Object.fromEntries(
-      Object.entries(savedCasting.map).filter(
-        ([id]) => id === 'therapist' || cast.some((c) => c.id === id),
-      ),
-    ),
-  }));
-  const [kokoroVoices, setKokoroVoices] = useState<CastVoice[]>(KOKORO_VOICES);
-  const [kokoroMap, setKokoroMap] = useState<Record<string, string>>(() => ({
-    ...autoCast(KOKORO_VOICES, cast),
-    ...loadVoiceCasting('kokoro').map,
-  }));
-  const [localMap, setLocalMap] = useState<Record<string, string>>({});
+  const voiceMap = useMemo(() => autoCast(KOKORO_VOICES, cast), [cast]);
   const [voiceHold, setVoiceHold] = useState(false);
   const [speechPlaying, setSpeechPlaying] = useState(false);
   const [replay, setReplay] = useState(0);
-  const voiceMap = voiceMode === 'cloud' ? cloudMap : voiceMode === 'kokoro' ? kokoroMap : localMap;
-  const voiceURI = voiceMode === 'off' ? 'off' : (voiceMap.therapist ?? '');
-  const [volume, setVolume] = useState(65);
-  const [audioMessage, setAudioMessage] = useState('Enable sound to hear the cast.');
+  const [connectingAudio, setConnectingAudio] = useState(false);
+  const [audioError, setAudioError] = useState(false);
+  const [audioMessage, setAudioMessage] = useState(
+    'Kokoro on this computer. Voices and delivery are automatic.',
+  );
+  const connection = useRef<AbortController | null>(null);
   const [exporting, setExporting] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [modal, setModal] = useState<'privacy' | 'connect' | 'help' | null>(null);
@@ -123,7 +98,6 @@ export function App({
   const [rosterOpen, setRosterOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const director = useRef(new AnimationDirector());
-  const wasPaused = useRef(false);
   const audio = useRef(new SessionAudio());
 
   const deck = useMemo(() => storyFor(cast, state.seed), [cast, state.seed]);
@@ -177,26 +151,9 @@ export function App({
     return () => d.cancelAll();
   }, [state.phase, state.beat, state.actionSerial, state.actionLine, active, beat, line]);
   useEffect(() => {
-    const stopped = paused || !!modal || voiceHold;
-    if (stopped) director.current.pause();
-    else {
-      // Speech restarts the current sentence after an interruption; give it a full beat.
-      if (
-        wasPaused.current &&
-        voiceMode === 'local' &&
-        sound &&
-        voiceURI &&
-        voiceURI !== 'off' &&
-        active
-      ) {
-        director.current.play(lineDuration(line), setElapsed, () =>
-          dispatch({ type: state.actionLine ? 'CLEAR_REACTION' : 'NEXT' }),
-        );
-      }
-      director.current.resume();
-    }
-    wasPaused.current = stopped;
-  }, [paused, modal, sound, voiceURI, active, line, state.actionLine, voiceHold, voiceMode]);
+    if (paused || modal || voiceHold) director.current.pause();
+    else director.current.resume();
+  }, [paused, modal, voiceHold, state.phase, state.beat, state.actionSerial, line]);
   useEffect(() => {
     try {
       localStorage.setItem('ta-motion-reduced', String(reduced));
@@ -210,97 +167,49 @@ export function App({
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
-    const refresh = () => {
-      const local = audio.current.voices();
-      setVoices(local);
-      setLocalMap((previous) =>
-        Object.keys(previous).length
-          ? previous
-          : autoCast(
-              local.map((v) => ({ id: v.voiceURI, name: v.name })),
-              cast,
-            ),
-      );
-    };
-    refresh();
-    if (typeof speechSynthesis !== 'undefined')
-      speechSynthesis.addEventListener('voiceschanged', refresh);
-    return () => {
-      if (typeof speechSynthesis !== 'undefined')
-        speechSynthesis.removeEventListener('voiceschanged', refresh);
-    };
-  }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        'ta-cloud-casting-v1',
-        JSON.stringify({ voices: cloudVoices, map: cloudMap }),
-      );
-    } catch {
-      /* Optional preferences. */
-    }
-  }, [cloudVoices, cloudMap]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        'ta-kokoro-casting-v1',
-        JSON.stringify({ voices: kokoroVoices, map: kokoroMap }),
-      );
-    } catch {
-      /* Optional preferences. */
-    }
-  }, [kokoroVoices, kokoroMap]);
-  useEffect(() => {
-    audio.current.volume = volume / 100;
-  }, [volume]);
-  useEffect(() => {
     const engine = audio.current;
     if (!sound || paused || modal) {
       engine.stop();
+      if (sound) setAudioMessage('Speech paused. Resume to continue the conversation.');
       return;
     }
-    if (!active) return;
+    if (!active) {
+      setAudioMessage('Local voices ready. George leads; every tab has its own voice.');
+      return;
+    }
     engine.effect(cue);
     const assigned = voiceMap[speakerId ?? 'therapist'];
     const delivery = deliveryFor(speaker, cue);
-    if (voiceMode === 'cloud' || voiceMode === 'kokoro') {
-      if (!assigned) {
-        setAudioMessage('Connect the selected voice engine in Audio settings.');
-        return;
-      }
-      setVoiceHold(true);
-      setAudioMessage(`Preparing ${speaker?.name ?? 'the therapist'}: ${delivery.label}.`);
-      setSpeechPlaying(false);
-      void engine.speakCloud(
-        line,
-        assigned,
-        delivery.emotion,
-        !speaker,
-        () => {
-          setVoiceHold(false);
-          setSpeechPlaying(false);
-          if (state.phase === 'playing' || state.actionLine) director.current.skipCurrent();
-        },
-        (message) => {
-          setVoiceHold(false);
-          setSpeechPlaying(false);
-          setAudioMessage(message);
-        },
-        voiceMode,
-        () => {
-          setSpeechPlaying(true);
-          setAudioMessage(`Speaking: ${speaker?.name ?? 'The therapist'}. ${delivery.label}.`);
-        },
-      );
-    } else if (voiceMode === 'local' && assigned) {
-      engine.speak(
-        line,
-        assigned,
-        delivery.pitch,
-        () => setAudioMessage('Device voice failed. Choose another voice or connect ElevenLabs.'),
-        delivery.rate,
-      );
-    }
+    setVoiceHold(true);
+    setAudioMessage(`Preparing ${speaker ? shortTitle(speaker, 32) : 'the therapist'}…`);
+    setSpeechPlaying(false);
+    void engine.speak(
+      line,
+      assigned,
+      delivery.emotion,
+      !speaker,
+      () => {
+        setVoiceHold(false);
+        setSpeechPlaying(false);
+        setAudioMessage('Local voices ready. George leads; every tab has its own voice.');
+        if (state.phase === 'playing' || state.actionLine) director.current.skipCurrent();
+      },
+      () => {
+        setVoiceHold(false);
+        setSpeechPlaying(false);
+        setSound(false);
+        setAudioError(true);
+        setAudioMessage(
+          'Could not play local speech. Check that Kokoro is running and this browser tab is unmuted.',
+        );
+      },
+      () => {
+        setSpeechPlaying(true);
+        setAudioMessage(
+          `${speaker ? shortTitle(speaker, 32) : 'The therapist'} is speaking. ${delivery.label}.`,
+        );
+      },
+    );
     return () => {
       engine.stop();
       setVoiceHold(false);
@@ -316,13 +225,17 @@ export function App({
     cue,
     paused,
     modal,
-    voiceURI,
-    voiceMode,
     voiceMap,
     replay,
     speakerId,
   ]);
-  useEffect(() => () => audio.current.dispose(), []);
+  useEffect(
+    () => () => {
+      connection.current?.abort();
+      audio.current.dispose();
+    },
+    [],
+  );
   const select = (id: string) => dispatch({ type: 'SELECT', id });
   const decide = (id: string, fate: Fate) => {
     if (paused || modal) return;
@@ -348,28 +261,35 @@ export function App({
     setShowRestored(false);
     dispatch({ type: 'RESET', characters: cast });
   };
-  const enableAudio = async () => {
-    try {
-      if (voiceMode === 'kokoro') await ensureVoicePermission();
-      await audio.current.unlock();
-      audio.current.effect('victory');
-      setSound(true);
-      setAudioMessage('Sound ready. Choose your voice cast below.');
-      return true;
-    } catch {
-      setSound(false);
-      setAudioMessage(
-        'Audio could not start. Check the browser tab is unmuted, then try Test sound.',
-      );
-      setToast('Audio could not start. Open Audio settings to retry.');
-      return false;
-    }
-  };
   const toggleSound = async () => {
-    if (sound) {
+    if (sound || connectingAudio) {
+      connection.current?.abort();
       audio.current.stop();
+      setConnectingAudio(false);
       setSound(false);
-    } else await enableAudio();
+      setAudioMessage('Sound off. Captions keep the conversation going.');
+      return;
+    }
+    const controller = new AbortController();
+    connection.current = controller;
+    setConnectingAudio(true);
+    setAudioError(false);
+    setAudioMessage('Warming up Kokoro on this computer. The first connection can take a minute.');
+    try {
+      await audio.current.unlock();
+      await connectKokoro(controller.signal);
+      if (controller.signal.aborted) return;
+      setSound(true);
+      audio.current.effect('victory');
+      setAudioMessage('Local voices ready. George leads; every tab has its own voice.');
+    } catch {
+      if (!controller.signal.aborted) {
+        setAudioError(true);
+        setAudioMessage('Kokoro is unavailable. Start the local voice service, then retry sound.');
+      }
+    } finally {
+      if (connection.current === controller) setConnectingAudio(false);
+    }
   };
   const downloadRecap = () => {
     downloadFile(recapText(state), 'tabs-anonymous-recap.txt', 'text/plain;charset=utf-8');
@@ -626,9 +546,7 @@ export function App({
               <TherapyArena
                 state={state}
                 speakingId={speaker?.id ?? null}
-                speechActive={
-                  !sound || voiceMode === 'local' || voiceMode === 'off' || speechPlaying
-                }
+                speechActive={!sound || speechPlaying}
                 beat={beat}
                 cue={cue}
                 reduced={reduced}
@@ -700,6 +618,13 @@ export function App({
                   >
                     <MessageSquare size={15} /> Roast this tab
                   </button>
+                  <button
+                    className="button"
+                    disabled={paused || !!modal || cast.length < 2}
+                    onClick={() => dispatch({ type: 'WITNESS', id: selected.id })}
+                  >
+                    <MessageSquare size={15} /> Call a witness
+                  </button>
                 </div>
               )}
               <div className="playback">
@@ -735,7 +660,9 @@ export function App({
                     aria-pressed={sound}
                   >
                     {sound ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                    <span>Sound {sound ? 'on' : 'off'}</span>
+                    <span>
+                      {connectingAudio ? 'Cancel voice startup' : `Sound ${sound ? 'on' : 'off'}`}
+                    </span>
                   </button>
                   <button
                     className={`text-control motion-toggle ${reduced ? 'on' : ''}`}
@@ -759,98 +686,14 @@ export function App({
                   </div>
                 </div>
               </div>
-              <details className="audio-settings">
-                <summary>
-                  Audio settings{' '}
-                  <span>
-                    {sound
-                      ? voiceMode !== 'off' && voiceURI
-                        ? voiceMode === 'cloud'
-                          ? 'ElevenLabs cast'
-                          : voiceMode === 'kokoro'
-                            ? 'Kokoro local cast'
-                            : 'Device cast'
-                        : 'Effects only'
-                      : 'Muted'}
-                  </span>
-                </summary>
-                <div className="audio-options">
-                  <label>
-                    Volume{' '}
-                    <input
-                      aria-label="Sound volume"
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={volume}
-                      onChange={(e) => setVolume(Number(e.target.value))}
-                    />
-                    <output>{volume}%</output>
-                  </label>
-                  <button className="button" onClick={() => void enableAudio()}>
-                    Test sound
+              <div className={`sound-status ${audioError ? 'has-error' : ''}`}>
+                <span role="status">{audioMessage}</span>
+                {audioError && (
+                  <button className="button" onClick={() => void toggleSound()}>
+                    Retry sound
                   </button>
-                </div>
-                <VoiceStudio
-                  cast={cast}
-                  localVoices={voices}
-                  mode={voiceMode}
-                  setMode={setVoiceMode}
-                  mapping={voiceMap}
-                  setMapping={
-                    voiceMode === 'cloud'
-                      ? setCloudMap
-                      : voiceMode === 'kokoro'
-                        ? setKokoroMap
-                        : setLocalMap
-                  }
-                  cloudVoices={voiceMode === 'kokoro' ? kokoroVoices : cloudVoices}
-                  setCloudVoices={voiceMode === 'kokoro' ? setKokoroVoices : setCloudVoices}
-                  status={audioMessage}
-                  onPreview={(id, emotion) => {
-                    setPaused(true);
-                    void (
-                      voiceMode === 'local' || voiceMode === 'off'
-                        ? Promise.resolve()
-                        : ensureVoicePermission()
-                    )
-                      .then(() => audio.current.unlock())
-                      .then(
-                        () =>
-                          new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
-                      )
-                      .then(() => {
-                        const c = state.characters.find((c) => c.id === id);
-                        const text = previewLine(c, emotion);
-                        if (voiceMode === 'cloud' || voiceMode === 'kokoro') {
-                          setVoiceHold(true);
-                          void audio.current.speakCloud(
-                            text,
-                            voiceMap[id],
-                            emotion,
-                            id === 'therapist',
-                            () => setVoiceHold(false),
-                            (message) => {
-                              setVoiceHold(false);
-                              setAudioMessage(message);
-                            },
-                            voiceMode,
-                          );
-                        } else
-                          audio.current.speak(
-                            text,
-                            voiceMap[id],
-                            id === 'therapist' ? 0.93 : 1,
-                            () => setAudioMessage('Could not preview this voice.'),
-                            id === 'therapist' ? 0.94 : 1,
-                          );
-                      })
-                      .catch(() =>
-                        setAudioMessage('Could not start voice preview. Check audio permissions.'),
-                      );
-                  }}
-                />
-              </details>
+                )}
+              </div>
             </div>
             <aside className="dossier" aria-label="Character dossier">
               <div className="dossier-top">
@@ -1116,10 +959,9 @@ function InfoModal({
               pinned tabs, and internal pages from grouping.
             </p>
             <p>
-              Optional ElevenLabs voices send spoken lines, including tab titles, through your local
-              voice server to ElevenLabs. The API key stays in the server environment file. Provider
-              retention and charges apply. Kokoro and device voice preview stay local. Voice
-              assignments are saved on this device.
+              Speech is generated by Kokoro on this computer. Dialogue uses tab titles, domains,
+              shared topics, and your decisions. No page content is read, and no dialogue is sent to
+              a cloud provider. Voice casting is automatic and is not saved as a preference.
             </p>
             <p>
               Arena retirements are fiction. Real tab grouping requires a separate preview and an

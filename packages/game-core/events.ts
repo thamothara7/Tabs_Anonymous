@@ -1,3 +1,4 @@
+import { caseSummary } from './context';
 import { personalLine, shortTitle } from './dialogue';
 import { duplicateGroups } from './classify';
 import type { Beat, Character } from './types';
@@ -14,21 +15,21 @@ export function storyFor(cast: Character[], seed = 42): Beat[] {
   return [
     {
       speaker: 'therapist',
-      line: `Welcome to Tabs Anonymous. ${cast.length} tabs, ${new Set(cast.map((c) => c.category)).size} personalities, one person insisting this is a system.`,
+      line: `Welcome to Tabs Anonymous. ${cast.length} tabs, ${new Set(cast.map((c) => c.category)).size} personalities, one person insisting this is a system. ${caseSummary(cast)}`,
       cue: 'entrance',
       duration: 6500,
       label: 'Everybody, take a seat.',
     },
     {
       speaker: worker?.id ?? 'therapist',
-      line: worker ? personalLine(worker, seed) : 'An empty room. Finally, some peace.',
+      line: worker ? personalLine(worker, seed, cast) : 'An empty room. Finally, some peace.',
       cue: 'talk',
       duration: 7200,
       label: 'The first confession',
     },
     {
       speaker: entertainer?.id ?? 'therapist',
-      line: entertainer ? personalLine(entertainer, seed + 1) : 'Even the chairs have left.',
+      line: entertainer ? personalLine(entertainer, seed + 1, cast) : 'Even the chairs have left.',
       cue: 'talk',
       duration: 6500,
       target: worker?.id,
@@ -48,7 +49,13 @@ export function storyFor(cast: Character[], seed = 42): Beat[] {
       speaker: duplicate?.[1] ?? by('other'),
       line: duplicate
         ? 'I’m not a duplicate. I’m a backup plan with feelings.'
-        : 'I would like to remain mysterious, and also open.',
+        : cast.find((c) => c.id === by('other'))
+          ? personalLine(
+              cast.find((c) => c.id === by('other'))!,
+              seed + 2,
+              cast,
+            )
+          : 'Even the empty chair has an alibi.',
       cue: 'talk',
       duration: 6000,
       target: duplicate?.[0],
@@ -75,7 +82,7 @@ export function storyFor(cast: Character[], seed = 42): Beat[] {
     },
     {
       speaker: entertainer?.id ?? 'therapist',
-      line: 'Sure. Here are the minutes: one minute ago, this meeting had no popcorn. You’re welcome.',
+      line: `The minutes: “${worker ? shortTitle(worker, 28) : 'the empty chair'}” wants an alliance with “${entertainer ? shortTitle(entertainer, 28) : 'another chair'}”. I brought popcorn. It is our first tangible deliverable.`,
       cue: 'popcorn',
       duration: 7000,
       target: worker?.id,

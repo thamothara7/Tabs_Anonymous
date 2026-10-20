@@ -1,4 +1,16 @@
-# Phase six: 20 October 2026 · v0.6.0
+# Phase seven: 20 October 2026 · v0.7.0
+
+- Removed Audio settings, manual casting, voice previews, engine selection, cloud routes, and browser synthesis. One Sound toggle connects to Kokoro, with a cancelable warmup and compact retry status. George is always the therapist and twelve distinct tab voices are assigned automatically; old overrides are ignored.
+- Dialogue now incorporates bounded title topics, related tabs, domain counts, duplicates, audible status, prior defense, and verdicts. Local authored templates remain the writing engine, with no page reading or language-model inference.
+- **Call a witness** lets another character testify about the selected tab. Relevant peers speak first, repeat calls rotate peers and testimony, and the witness uses its own voice and skeptical delivery. The defendant stays selected.
+- **Refresh cast and restart** reads currently open eligible tabs into a new session. Failed refresh preserves the existing session. Actual tabs and groups are not changed by refreshing.
+- Fixed scene-clock synchronization when a new reaction interrupts speech; long playback cannot advance the story early. Pause, mute, cancellation, late readiness responses, and errors remain covered.
+- Verification: 50 unit tests, 27 browser tests with three intentional mobile skips, both production builds, and six real Kokoro WAV samples. An additional real Chromium playback check decoded and played George's 15.955-second host line and a separate 16.505-second witness line, then verified pause. Physical speaker quality is not an automated test.
+- The local service was restarted and warmed with the configured extension origin. The build is ready in `dist-extension/` and the ZIP in `artifacts/`. Reload the extension in Brave to use v0.7.0.
+
+## Earlier releases
+
+## Phase six: 20 October 2026 · v0.6.0
 
 - Kokoro local speech is the default, with 13 bundled voice definitions, George reserved for the therapist, automatic personality-based assignment, separate saved casting, and eight preview delivery profiles.
 - Reaction pacing, sentence pauses, bounded gain, emotion-aware audio caching, and playback-driven mouth animation. Kokoro has no direct emotion tags; actor-level performance is not promised.

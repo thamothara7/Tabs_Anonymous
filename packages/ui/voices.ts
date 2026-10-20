@@ -1,5 +1,4 @@
 import type { Character, Cue, Emotion } from '../game-core/types';
-export type VoiceMode = 'kokoro' | 'cloud' | 'local' | 'off';
 export const KOKORO_VOICES: CastVoice[] = [
   ['bm_george', 'George', 'Bold, grounded therapist'],
   ['af_heart', 'Heart', 'Warm and expressive'],
@@ -100,62 +99,17 @@ export async function ensureVoicePermission(): Promise<void> {
       throw new Error('Local voice server permission was not granted.');
   }
 }
-export async function connectCloudVoices(
-  engine: 'cloud' | 'kokoro' = 'cloud',
-): Promise<CastVoice[]> {
+export async function connectKokoro(signal: AbortSignal): Promise<void> {
   await ensureVoicePermission();
-  const response = await fetch(`${VOICE_SERVER}${engine === 'kokoro' ? '/kokoro' : ''}/voices`, {
+  signal.throwIfAborted();
+  const response = await fetch(`${VOICE_SERVER}/kokoro/voices`, {
     headers: { 'X-TA-Client': '1' },
-    signal: AbortSignal.timeout(120000),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(120000)]),
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error ?? 'Could not connect to the voice server.');
-  if (!data.voices?.length)
-    throw new Error(
-      engine === 'kokoro'
-        ? 'Kokoro has no installed voices. Run npm run voice:setup.'
-        : 'No ElevenLabs voices available. Add voices to your account.',
-    );
-  return data.voices;
-}
-
-export function loadVoiceCasting(engine: 'cloud' | 'kokoro' = 'cloud'): {
-  voices: CastVoice[];
-  map: Record<string, string>;
-} {
-  try {
-    const data = JSON.parse(localStorage.getItem(`ta-${engine}-casting-v1`) ?? '{}');
-    const voices: CastVoice[] = Array.isArray(data.voices)
-      ? data.voices
-          .filter((v: CastVoice) => typeof v?.id === 'string' && typeof v?.name === 'string')
-          .slice(0, 100)
-      : [];
-    const ids = new Set(voices.map((v) => v.id));
-    const map =
-      data.map && typeof data.map === 'object'
-        ? (Object.fromEntries(
-            Object.entries(data.map).filter(
-              ([key, value]) => key.length < 100 && typeof value === 'string' && ids.has(value),
-            ),
-          ) as Record<string, string>)
-        : {};
-    return { voices, map };
-  } catch {
-    return { voices: [], map: {} };
-  }
-}
-
-export function previewLine(c: Character | undefined, emotion: Emotion): string {
-  if (!c) return 'Welcome. Take a breath. I run this room, and every tab will get its turn.';
-  const lines: Record<Emotion, string> = {
-    neutral: 'I have a perfectly reasonable explanation. It just requires twelve more tabs.',
-    happy: 'You picked me! I knew being open for three weeks would finally pay off!',
-    smug: 'Of course I am essential. The other tabs are just here for emotional support.',
-    angry: 'Excuse me! I was promised a productive afternoon. This is a hostage situation!',
-    shocked: 'Wait. There is another copy of me? And you gave them a better seat?',
-    crying: 'Fine. I will wait on the balcony. I even saved your place in the article.',
-    suspicious: 'Interesting. You say you need me. Yet you cannot remember why you opened me.',
-    victorious: 'Still standing! Put that on my resume. Right below professional distraction.',
-  };
-  return `${c.name}. ${lines[emotion]}`;
+  if (
+    !response.ok ||
+    !KOKORO_VOICES.every((v) => data.voices?.some((item: CastVoice) => item.id === v.id))
+  )
+    throw new Error('Kokoro voices are not ready.');
 }

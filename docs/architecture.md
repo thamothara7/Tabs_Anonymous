@@ -51,16 +51,15 @@ The SVG recap is generated locally from the fictional ending and aggregate fate 
 
 The stage reflows the remaining cast and moves retired characters to a horizontally scrollable, selectable tray. Duplicate scenes give the arguing pair their own space. The results list reflects actual keep/group/retire verdicts, including empty buckets, and shows recent dialogue highlights. Bounded history and the dialogue variation counter survive reload.
 
-Dialogue combines bounded titles, boundary-matched host jokes, category variants, duplicates, and prior game choices. `ROAST` uses the same single reaction clock as other interventions. No live page content or external generation is used.
+Dialogue combines bounded titles, title topics, domain counts, shared-topic peers, category variants, duplicates, and prior game choices. `ROAST` uses the same single reaction clock as other interventions. No live page content or external generation is used.
 
-`SessionAudio` unlocks Web Audio on an explicit gesture, schedules cue-specific notes with gain envelopes, and releases nodes on completion. English voices are filtered to `localService`. Late voice discovery cannot restart the animation clock. Muting, pausing, opening a dialog, advancing, and unmounting cancel the old speech. Resuming with voices restarts the current sentence and its timer; without voices it resumes elapsed time. Sound remains optional and unavailable voices fall back to captions/effects.
+`SessionAudio` unlocks Web Audio on an explicit gesture, schedules cue-specific notes with gain envelopes, and releases nodes on completion. Speech uses Kokoro only. Muting, pausing, opening a dialog, advancing, and unmounting cancel the old speech. Resuming with voices restarts the current sentence and its timer; without voices it resumes elapsed time. Sound remains optional; failures turn it off and keep captions available.
 
 PNG export rasterizes the self-contained SVG locally at 1200×630. Both formats use only generic artwork, an ending, and aggregate counts. Long award names wrap onto two lines. Text export and on-screen highlights include titles and dialogue; native browser grouping remains separate.
 
 ## Phase-four speech boundary
 
-The client casts one voice per actor and reserves the main voice for the therapist. Cloud speech uses a loopback-only Node server; the key never enters client code. The server calls ElevenLabs with controlled emotional tags. The client aborts obsolete fetches, stops the previous audio element, revokes object URLs, and guards completion callbacks with a generation counter. Scenes wait for cloud speech completion instead of running on a fixed speech estimate. Device synthesis is an explicitly selected preview engine.
-
+The client casts one Kokoro voice per actor and reserves George for the therapist. The localhost server has no cloud routes. The client aborts obsolete fetches, stops the previous audio element, revokes object URLs, and guards completion callbacks with a generation counter. Scenes wait for playback completion. A separate abortable readiness request validates the 13-voice catalog before enabling sound; startup can be canceled. Old manual maps cannot override casting.
 Character labels have fixed row space independent of the artwork. Dialogue selection filters recently used punchlines across the cast, with bounded history restored from checkpoints. The extension icons rasterize the existing SVG brand mark; generated PNG assets are committed and packaged without needing browser automation during a normal build.
 
 ## Phase five: animated recap
@@ -69,4 +68,12 @@ Character labels have fixed row space independent of the artwork. Dialogue selec
 
 ## Phase six: local Kokoro speech
 
-`/kokoro/voices` and `/kokoro/speech` share the localhost server boundary with the optional cloud routes but do not require a key or invoke the cloud fetcher. A lazy persistent Python worker owns one model shared between US and UK English pipelines. Typed JSON requests use a bounded queue; canceled requests retain their inference slot until the worker finishes. Runtime forces offline model loading. Server shutdown terminates the worker. The client keeps separate maps for Kokoro, cloud, and device engines and passes reaction emotion independently of voice identity.
+`/kokoro/voices` and `/kokoro/speech` use a loopback server with exact origin checks and optional extension host permission. A lazy persistent Python worker owns one model shared between US and UK English pipelines. Typed JSON requests use a bounded queue; canceled requests retain their inference slot until the worker finishes. Runtime forces offline model loading. Server shutdown terminates the worker. Reaction emotion is passed separately from stable voice identity.
+
+## Phase seven: contextual conversation
+
+`context.ts` extracts bounded title words and ranks peers by duplicate address, shared title topics, same domain, then category. `dialogue.ts` turns that evidence into local authored confession, roast, and witness lines. Recent history filters repeated lines; there is no external text model or page-body reading. Topic matching is lexical, not semantic understanding.
+
+`WITNESS` preserves the selected defendant while setting `actionTarget` to the witness. The witness receives a skeptical expression and speaks in its own voice. Repeat calls rotate through peers; testimony incorporates the defendant's verdict or prior defense. The same cancellable reaction clock and bounded history apply. Single-character casts disable the action.
+
+The extension's **Refresh cast and restart** explicitly takes a new snapshot, clears the previous game checkpoint, and remounts the shared App with the fresh cast. A failed refresh retains the old session and displays the error. Actual browser groups remain independent and untouched by this action.

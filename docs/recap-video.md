@@ -5,7 +5,7 @@ Finish all verdicts and open **The awards ceremony**. The new **Your tabs made a
 - **Play reel** starts a 15-second captioned preview. It never starts automatically.
 - **Pause reel**, **Restart reel**, chapter buttons, and the timeline let you revisit any moment.
 - **Minimal motion** follows the session's reduced-motion preference initially. It removes entrances, bobbing, and rotation in both the preview and export. Chapter cuts and the progress indicator remain.
-- **Save video** generates a 1200×630 silent WebM on this device in about 15 seconds. No voice provider is needed. The live session's ElevenLabs audio is not included.
+- **Save video** generates a 1200×630 silent WebM on this device in about 15 seconds. No voice provider is needed. The live session's Kokoro audio is not included.
 - Keep the tab visible while exporting. **Cancel export**, switching away from the tab, or leaving the results stops recording and discards the partial film. Returning does not restart it automatically.
 - Browsers without supported canvas recording keep the preview and PNG/SVG card downloads. WebM compatibility varies between social platforms; this release does not convert to MP4.
 
