@@ -117,6 +117,12 @@ export class KokoroWorker implements LocalSpeech {
     });
   }
   close() {
-    this.child?.kill();
+    const error = new Error('Kokoro worker closed.');
+    for (const request of this.pending.values()) request.reject(error);
+    this.pending.clear();
+    const child = this.child;
+    this.child = undefined;
+    this.startup = undefined;
+    child?.kill();
   }
 }

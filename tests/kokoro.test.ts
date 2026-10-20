@@ -30,6 +30,17 @@ it('serves local voices and WAV reactions without a key or cloud request, valida
     'Content-Type': 'application/json',
   };
   try {
+    const preflight = await fetch(base + '/kokoro/speech', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: headers.Origin,
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type, x-ta-client',
+      },
+    });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get('Access-Control-Allow-Origin')).toBe(headers.Origin);
+    expect(preflight.headers.get('Access-Control-Allow-Headers')).toContain('X-TA-Client');
     expect((await (await fetch(base + '/kokoro/voices', { headers })).json()).voices).toHaveLength(
       13,
     );
