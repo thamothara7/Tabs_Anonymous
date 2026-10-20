@@ -2,7 +2,7 @@
 
 **Your browser tabs have formed a support group. They’d like a word with you.**
 
-An animated, interactive tab therapy arena: twelve expressive characters confess, expose duplicates, form questionable alliances, and ask you to decide their fate. Phase five (v0.5.0) of the playable implementation of the [hackathon build spec](Tabs_Anonymous_Animated_Hackathon_Build_Spec.md).
+An animated, interactive tab therapy arena: twelve expressive characters confess, expose duplicates, form questionable alliances, and ask you to decide their fate. Phase six (v0.6.0) of the playable implementation of the [hackathon build spec](Tabs_Anonymous_Animated_Hackathon_Build_Spec.md).
 
 ![The waiting room](docs/screenshots/waiting-room.png)
 
@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173**. The silent demo and device-voice preview need no credentials. Expressive ElevenLabs voices require the optional local server and your API key. The script runs for roughly two minutes before the player-led final vote; pause, skip, and interrupt at any time.
+Open **http://127.0.0.1:5173**. The default Kokoro voices run locally without an API key. Run `npm run voice:setup` once, then `npm run voice:server`. The silent demo and device-voice preview need no server. ElevenLabs remains an optional cloud engine. The script runs for roughly two minutes before the player-led final vote; pause, skip, and interrupt at any time.
 
 ## What works
 
@@ -28,7 +28,7 @@ Open **http://127.0.0.1:5173**. The silent demo and device-voice preview need no
 - Tab-specific confessions and a rotating **Roast this tab** interaction that reacts to duplicates, category counts, and your decisions.
 - A readable balcony tray, uncluttered duplicate confrontations, expandable full titles, and outcome-based recaps with session highlights.
 - Eight character categories, metadata-aware authored dialogue, diverse casting, and full-title inspection for real tabs.
-- Desktop/mobile layouts, captions, pause/skip/restart, persisted reduced-motion preference, and optional sound effects, ElevenLabs expressive voice casting, or device voice previews.
+- Desktop/mobile layouts, captions, pause/skip/restart, persisted reduced-motion preference, and optional sound effects, automatic Kokoro local casting, ElevenLabs cloud casting, or device voice previews.
 - Optional Chrome MV3 extension: permission prompt, local snapshot, 12 featured representatives, explicit native grouping preview, per-tab approval, stale-tab checks, and partial-failure reporting.
 - Locally bundled fonts. No telemetry or page scraping. Optional ElevenLabs speech sends dialogue through a local voice server only when enabled.
 
@@ -38,7 +38,9 @@ See the [animated recap](docs/screenshots/animated-recap.png), [mobile voting do
 
 ## Expressive voices
 
-See [voice setup](docs/voices.md). Set the server-only key in `.env`, run `npm run voice:server`, and connect from Audio settings. The therapist has a reserved voice; tabs receive separate voices with emotional delivery cues. Missing cloud configuration is reported explicitly.
+See [voice setup](docs/voices.md). Kokoro is now the default: 13 local voices, George reserved for the therapist, automatic personality-based casting, and paced reaction delivery. Run `npm run voice:setup`, then `npm run voice:server`. No API key is needed. The extension also needs its ID in `.env`. Preview each delivery in Audio settings. ElevenLabs remains optional.
+
+![Local voice studio](docs/screenshots/local-voice-studio.png)
 
 ## Chrome extension
 

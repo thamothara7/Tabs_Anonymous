@@ -66,3 +66,7 @@ Character labels have fixed row space independent of the artwork. Dialogue selec
 ## Phase five: animated recap
 
 `createReel` projects game state into aggregate counts and authored strings, excluding all tab metadata and history. One deterministic canvas renderer powers a React preview and a separate offscreen recording canvas. The preview starts paused and exposes chapter buttons, a timeline, and captions outside the canvas. A local MediaRecorder captures only the generated canvas at 30 fps. Abort, hidden-tab, unmount, recorder error, and timeout paths stop capture tracks and release animation frames. No new permission or dependency is required.
+
+## Phase six: local Kokoro speech
+
+`/kokoro/voices` and `/kokoro/speech` share the localhost server boundary with the optional cloud routes but do not require a key or invoke the cloud fetcher. A lazy persistent Python worker owns one model shared between US and UK English pipelines. Typed JSON requests use a bounded queue; canceled requests retain their inference slot until the worker finishes. Runtime forces offline model loading. Server shutdown terminates the worker. The client keeps separate maps for Kokoro, cloud, and device engines and passes reaction emotion independently of voice identity.

@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
+import { KokoroWorker, type LocalSpeech } from './kokoro.ts';
 
 const delivery: Record<string, string> = {
   therapist: '[confident] [calm]',
@@ -14,7 +15,13 @@ const delivery: Record<string, string> = {
   victorious: '[excited]',
 };
 export function createVoiceServer(
-  options: { key?: string; origins?: string[]; fetcher?: typeof fetch; model?: string } = {},
+  options: {
+    key?: string;
+    origins?: string[];
+    fetcher?: typeof fetch;
+    model?: string;
+    kokoro?: LocalSpeech;
+  } = {},
 ) {
   const key = options.key ?? process.env.ELEVENLABS_API_KEY ?? '';
   const model = options.model ?? process.env.ELEVENLABS_MODEL ?? 'eleven_v3';
@@ -27,10 +34,13 @@ export function createVoiceServer(
     ],
   );
   const fetcher = options.fetcher ?? fetch;
+  const kokoro = options.kokoro ?? new KokoroWorker();
   const cache = new Map<string, Buffer>();
   let cacheBytes = 0;
   let active = 0;
-  return createServer(async (req, res) => {
+  const server = createServer(async (req, res) => {
+    const local = req.url?.startsWith('/kokoro/') ?? false;
+    const path = local ? req.url!.slice(7) : req.url;
     const origin = req.headers.origin ?? '';
     const json = (code: number, value: unknown) => {
       res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -58,7 +68,7 @@ export function createVoiceServer(
       json(200, { configured: !!key, model });
       return;
     }
-    if (!key) {
+    if (!key && !local) {
       json(503, {
         error: 'Set ELEVENLABS_API_KEY in the local .env file and restart npm run voice:server.',
       });
@@ -69,13 +79,21 @@ export function createVoiceServer(
       return;
     }
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
+    const timeout = setTimeout(() => controller.abort(), local ? 120000 : 45000);
     res.on('close', () => {
       if (!res.writableEnded) controller.abort();
     });
     active++;
     try {
-      if (req.url === '/voices' && req.method === 'GET') {
+      if (path === '/voices' && req.method === 'GET') {
+        if (local) {
+          json(200, {
+            voices: await kokoro.voices(controller.signal),
+            engine: 'kokoro',
+            offline: true,
+          });
+          return;
+        }
         const upstream = await fetcher('https://api.elevenlabs.io/v2/voices?page_size=100', {
           headers: { 'xi-api-key': key },
           signal: controller.signal,
@@ -98,7 +116,7 @@ export function createVoiceServer(
         });
         return;
       }
-      if (req.url !== '/speech' || req.method !== 'POST') {
+      if (path !== '/speech' || req.method !== 'POST') {
         json(404, { error: 'Not found.' });
         return;
       }
@@ -135,33 +153,56 @@ export function createVoiceServer(
       }
       // Only authored delivery tags enter the prompt; tab titles cannot inject voice directions.
       const plain = input.text.replace(/\[[^\]]*\]/g, '').replace(/\u2014/g, '.');
-      const text = `${delivery[input.therapist === true ? 'therapist' : input.emotion]} ${plain}`;
+      const text = local
+        ? plain
+        : `${delivery[input.therapist === true ? 'therapist' : input.emotion]} ${plain}`;
       const payload = JSON.stringify({
         text,
         model_id: model,
         voice_settings: { stability: input.therapist === true ? 1 : 0.5, similarity_boost: 0.75 },
       });
       const cacheKey = createHash('sha256')
-        .update(input.voiceId + payload)
+        .update(
+          (local ? `kokoro:${input.emotion}:${input.therapist === true}:` : 'cloud:') +
+            input.voiceId +
+            payload,
+        )
         .digest('hex');
       let bytes = cache.get(cacheKey);
       if (!bytes) {
-        const upstream = await fetcher(
-          `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(input.voiceId)}?output_format=mp3_44100_128`,
-          {
-            method: 'POST',
-            headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
-            body: payload,
-            signal: controller.signal,
-          },
-        );
-        if (!upstream.ok) {
-          json(upstream.status === 401 ? 401 : 502, {
-            error: `ElevenLabs speech failed (${upstream.status}). Check voice access, quota, and model access.`,
-          });
-          return;
+        if (local) {
+          const available = await kokoro.voices(controller.signal);
+          if (!available.some((v) => v.id === input.voiceId)) {
+            json(400, { error: 'Unknown Kokoro voice. Reconnect to refresh the cast.' });
+            return;
+          }
+          bytes = await kokoro.speak(
+            {
+              text: plain,
+              voiceId: input.voiceId,
+              emotion: input.emotion,
+              therapist: input.therapist,
+            },
+            controller.signal,
+          );
+        } else {
+          const upstream = await fetcher(
+            `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(input.voiceId)}?output_format=mp3_44100_128`,
+            {
+              method: 'POST',
+              headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
+              body: payload,
+              signal: controller.signal,
+            },
+          );
+          if (!upstream.ok) {
+            json(upstream.status === 401 ? 401 : 502, {
+              error: `ElevenLabs speech failed (${upstream.status}). Check voice access, quota, and model access.`,
+            });
+            return;
+          }
+          bytes = Buffer.from(await upstream.arrayBuffer());
         }
-        bytes = Buffer.from(await upstream.arrayBuffer());
         if (bytes.length > 8 * 1024 * 1024) throw new Error('Audio response too large');
         while (cacheBytes + bytes.length > 32 * 1024 * 1024 && cache.size) {
           const first = cache.keys().next().value!;
@@ -171,16 +212,26 @@ export function createVoiceServer(
         cache.set(cacheKey, bytes);
         cacheBytes += bytes.length;
       }
-      res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' });
+      res.writeHead(200, {
+        'Content-Type': local ? 'audio/wav' : 'audio/mpeg',
+        'Cache-Control': 'no-store',
+      });
       res.end(bytes);
-    } catch {
+    } catch (error) {
       if (!res.destroyed)
-        json(502, { error: 'Voice service unavailable or timed out. Retry the line.' });
+        json(502, {
+          error:
+            local && error instanceof Error
+              ? error.message
+              : 'Voice service unavailable or timed out. Retry the line.',
+        });
     } finally {
       clearTimeout(timeout);
       active--;
     }
   });
+  server.on('close', () => kokoro.close());
+  return server;
 }
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   createVoiceServer().listen(4317, '127.0.0.1', () =>

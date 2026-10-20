@@ -9,3 +9,6 @@ playwright-report/
 .env.*
 !.env.example
 *.local
+.venv-kokoro/
+.local-voices/
+__pycache__/

@@ -1,7 +1,7 @@
 import { VOICE_SERVER } from './voices';
 import type { Cue } from '../game-core/types';
 
-/** All effects are generated locally; speech uses installed device voices only. */
+/** All effects are generated locally; speech uses an explicitly selected local or cloud engine. */
 export class SessionAudio {
   private context: AudioContext | null = null;
   private nodes = new Set<OscillatorNode>();
@@ -25,19 +25,24 @@ export class SessionAudio {
     therapist: boolean,
     done: () => void,
     fail: (message: string) => void,
+    engine: 'cloud' | 'kokoro' = 'cloud',
+    started: () => void = () => {},
   ) {
     this.stop();
     const generation = this.generation;
     const controller = new AbortController();
     this.request = controller;
-    const timeout = setTimeout(() => controller.abort(), 50000);
+    const timeout = setTimeout(() => controller.abort(), engine === 'kokoro' ? 125000 : 50000);
     try {
-      const response = await fetch(`${VOICE_SERVER}/speech`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-TA-Client': '1' },
-        body: JSON.stringify({ text, voiceId, emotion, therapist }),
-        signal: controller.signal,
-      });
+      const response = await fetch(
+        `${VOICE_SERVER}${engine === 'kokoro' ? '/kokoro' : ''}/speech`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-TA-Client': '1' },
+          body: JSON.stringify({ text, voiceId, emotion, therapist }),
+          signal: controller.signal,
+        },
+      );
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error ?? 'Speech generation failed.');
@@ -61,6 +66,7 @@ export class SessionAudio {
         }
       };
       await player.play();
+      if (generation === this.generation) started();
     } catch (error) {
       if (generation === this.generation) {
         this.stop();

@@ -1,4 +1,12 @@
-# Phase five: 20 October 2026 · v0.5.0
+# Phase six: 20 October 2026 · v0.6.0
+
+- Kokoro local speech is the default, with 13 bundled voice definitions, George reserved for the therapist, automatic personality-based assignment, separate saved casting, and eight preview delivery profiles.
+- Reaction pacing, sentence pauses, bounded gain, emotion-aware audio caching, and playback-driven mouth animation. Kokoro has no direct emotion tags; actor-level performance is not promised.
+- Isolated Python 3.12 setup, pinned runtime dependencies, predownloaded model/voices, enforced offline model loading, local-only transport, bounded work queue, and existing cancelable playback.
+- Verification: 48 unit tests, 31 browser tests, and six real offline WAV samples. Browser decoding, non-silent unclipped signals, automatic casting, therapist separation, reaction changes, and cancellation are checked. Warm generation on the development Mac took about 0.8 to 1.4 seconds per test line.
+- Original cloud and device engines remain explicit alternatives. No credentials or model files are committed.
+
+## Phase five: 20 October 2026 · v0.5.0
 
 - Five-chapter animated awards reel with verdict-specific jokes, an ending reveal, caption transcript, pause/replay, scrubbing, and chapter selection.
 - Silent 1200×630 WebM export rendered locally from fictional artwork and aggregate counts. No screen capture, microphone, cloud calls, or browsing details.

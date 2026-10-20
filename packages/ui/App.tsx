@@ -44,7 +44,16 @@ import { recapSvg, recapText, downloadFile, downloadPng } from './recap';
 import { votingLine } from '../game-core/dialogue';
 import { SessionAudio, lineDuration } from './audio';
 import { VoiceStudio } from './VoiceStudio';
-import { autoCast, deliveryFor, loadVoiceCasting, type CastVoice } from './voices';
+import {
+  autoCast,
+  deliveryFor,
+  previewLine,
+  loadVoiceCasting,
+  KOKORO_VOICES,
+  ensureVoicePermission,
+  type VoiceMode,
+  type CastVoice,
+} from './voices';
 import { VotePanel } from './VotePanel';
 import { loadSession, saveSession } from '../game-core/session';
 import { TherapyArena } from './TherapyArena';
@@ -83,8 +92,8 @@ export function App({
   );
   const [sound, setSound] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceMode, setVoiceMode] = useState<'cloud' | 'local' | 'off'>('cloud');
-  const [savedCasting] = useState(loadVoiceCasting);
+  const [voiceMode, setVoiceMode] = useState<VoiceMode>('kokoro');
+  const [savedCasting] = useState(() => loadVoiceCasting());
   const [cloudVoices, setCloudVoices] = useState<CastVoice[]>(savedCasting.voices);
   const [cloudMap, setCloudMap] = useState<Record<string, string>>(() => ({
     ...autoCast(savedCasting.voices, cast, savedCasting.map.therapist),
@@ -94,10 +103,16 @@ export function App({
       ),
     ),
   }));
+  const [kokoroVoices, setKokoroVoices] = useState<CastVoice[]>(KOKORO_VOICES);
+  const [kokoroMap, setKokoroMap] = useState<Record<string, string>>(() => ({
+    ...autoCast(KOKORO_VOICES, cast),
+    ...loadVoiceCasting('kokoro').map,
+  }));
   const [localMap, setLocalMap] = useState<Record<string, string>>({});
   const [voiceHold, setVoiceHold] = useState(false);
+  const [speechPlaying, setSpeechPlaying] = useState(false);
   const [replay, setReplay] = useState(0);
-  const voiceMap = voiceMode === 'cloud' ? cloudMap : localMap;
+  const voiceMap = voiceMode === 'cloud' ? cloudMap : voiceMode === 'kokoro' ? kokoroMap : localMap;
   const voiceURI = voiceMode === 'off' ? 'off' : (voiceMap.therapist ?? '');
   const [volume, setVolume] = useState(65);
   const [audioMessage, setAudioMessage] = useState('Enable sound to hear the cast.');
@@ -226,6 +241,16 @@ export function App({
     }
   }, [cloudVoices, cloudMap]);
   useEffect(() => {
+    try {
+      localStorage.setItem(
+        'ta-kokoro-casting-v1',
+        JSON.stringify({ voices: kokoroVoices, map: kokoroMap }),
+      );
+    } catch {
+      /* Optional preferences. */
+    }
+  }, [kokoroVoices, kokoroMap]);
+  useEffect(() => {
     audio.current.volume = volume / 100;
   }, [volume]);
   useEffect(() => {
@@ -238,13 +263,14 @@ export function App({
     engine.effect(cue);
     const assigned = voiceMap[speakerId ?? 'therapist'];
     const delivery = deliveryFor(speaker, cue);
-    if (voiceMode === 'cloud') {
+    if (voiceMode === 'cloud' || voiceMode === 'kokoro') {
       if (!assigned) {
-        setAudioMessage('Connect ElevenLabs in Audio settings to enable expressive speech.');
+        setAudioMessage('Connect the selected voice engine in Audio settings.');
         return;
       }
       setVoiceHold(true);
-      setAudioMessage(`Speaking: ${speaker?.name ?? 'The therapist'}. ${delivery.label}.`);
+      setAudioMessage(`Preparing ${speaker?.name ?? 'the therapist'}: ${delivery.label}.`);
+      setSpeechPlaying(false);
       void engine.speakCloud(
         line,
         assigned,
@@ -252,11 +278,18 @@ export function App({
         !speaker,
         () => {
           setVoiceHold(false);
+          setSpeechPlaying(false);
           if (state.phase === 'playing' || state.actionLine) director.current.skipCurrent();
         },
         (message) => {
           setVoiceHold(false);
+          setSpeechPlaying(false);
           setAudioMessage(message);
+        },
+        voiceMode,
+        () => {
+          setSpeechPlaying(true);
+          setAudioMessage(`Speaking: ${speaker?.name ?? 'The therapist'}. ${delivery.label}.`);
         },
       );
     } else if (voiceMode === 'local' && assigned) {
@@ -271,6 +304,7 @@ export function App({
     return () => {
       engine.stop();
       setVoiceHold(false);
+      setSpeechPlaying(false);
     };
   }, [
     state.phase,
@@ -316,6 +350,7 @@ export function App({
   };
   const enableAudio = async () => {
     try {
+      if (voiceMode === 'kokoro') await ensureVoicePermission();
       await audio.current.unlock();
       audio.current.effect('victory');
       setSound(true);
@@ -590,6 +625,10 @@ export function App({
               </div>
               <TherapyArena
                 state={state}
+                speakingId={speaker?.id ?? null}
+                speechActive={
+                  !sound || voiceMode === 'local' || voiceMode === 'off' || speechPlaying
+                }
                 beat={beat}
                 cue={cue}
                 reduced={reduced}
@@ -728,7 +767,9 @@ export function App({
                       ? voiceMode !== 'off' && voiceURI
                         ? voiceMode === 'cloud'
                           ? 'ElevenLabs cast'
-                          : 'Device cast'
+                          : voiceMode === 'kokoro'
+                            ? 'Kokoro local cast'
+                            : 'Device cast'
                         : 'Effects only'
                       : 'Muted'}
                   </span>
@@ -756,35 +797,44 @@ export function App({
                   mode={voiceMode}
                   setMode={setVoiceMode}
                   mapping={voiceMap}
-                  setMapping={voiceMode === 'cloud' ? setCloudMap : setLocalMap}
-                  cloudVoices={cloudVoices}
-                  setCloudVoices={setCloudVoices}
+                  setMapping={
+                    voiceMode === 'cloud'
+                      ? setCloudMap
+                      : voiceMode === 'kokoro'
+                        ? setKokoroMap
+                        : setLocalMap
+                  }
+                  cloudVoices={voiceMode === 'kokoro' ? kokoroVoices : cloudVoices}
+                  setCloudVoices={voiceMode === 'kokoro' ? setKokoroVoices : setCloudVoices}
                   status={audioMessage}
-                  onPreview={(id) => {
+                  onPreview={(id, emotion) => {
                     setPaused(true);
-                    void audio.current
-                      .unlock()
+                    void (
+                      voiceMode === 'local' || voiceMode === 'off'
+                        ? Promise.resolve()
+                        : ensureVoicePermission()
+                    )
+                      .then(() => audio.current.unlock())
                       .then(
                         () =>
                           new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
                       )
                       .then(() => {
                         const c = state.characters.find((c) => c.id === id);
-                        const text = c
-                          ? `I am ${c.name}. I have a perfectly reasonable explanation for all of this.`
-                          : 'Welcome. Take a breath. I run this room, and every tab will get its turn.';
-                        if (voiceMode === 'cloud') {
+                        const text = previewLine(c, emotion);
+                        if (voiceMode === 'cloud' || voiceMode === 'kokoro') {
                           setVoiceHold(true);
                           void audio.current.speakCloud(
                             text,
                             voiceMap[id],
-                            c?.emotion ?? 'neutral',
+                            emotion,
                             id === 'therapist',
                             () => setVoiceHold(false),
                             (message) => {
                               setVoiceHold(false);
                               setAudioMessage(message);
                             },
+                            voiceMode,
                           );
                         } else
                           audio.current.speak(
@@ -1068,8 +1118,8 @@ function InfoModal({
             <p>
               Optional ElevenLabs voices send spoken lines, including tab titles, through your local
               voice server to ElevenLabs. The API key stays in the server environment file. Provider
-              retention and charges apply. Device voice preview stays local. Voice assignments are
-              saved on this device.
+              retention and charges apply. Kokoro and device voice preview stay local. Voice
+              assignments are saved on this device.
             </p>
             <p>
               Arena retirements are fiction. Real tab grouping requires a separate preview and an

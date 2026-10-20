@@ -51,6 +51,7 @@ test('cloud cast uses a separate therapist, waits for speech, and cancels on pau
   });
   await page.goto('/');
   await page.getByText('Audio settings', { exact: false }).first().click();
+  await page.getByLabel('Speech engine').selectOption('cloud');
   await page.getByRole('button', { name: 'Connect ElevenLabs', exact: true }).click();
   await expect(page.getByLabel('Voice for therapist')).toHaveValue('actor0');
   await expect(page.getByRole('region', { name: 'Voice studio' })).toContainText(
@@ -87,6 +88,7 @@ test('missing cloud service explains setup without silently speaking with a devi
   );
   await page.goto('/');
   await page.getByText('Audio settings', { exact: false }).first().click();
+  await page.getByLabel('Speech engine').selectOption('cloud');
   await page.getByRole('button', { name: 'Connect ElevenLabs', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Voice studio' })).toContainText(
     'Set ELEVENLABS_API_KEY',

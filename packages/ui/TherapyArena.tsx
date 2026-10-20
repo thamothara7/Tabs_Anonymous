@@ -20,6 +20,8 @@ const seats = [
 ];
 export function TherapyArena({
   state,
+  speakingId,
+  speechActive,
   beat,
   cue,
   paused,
@@ -30,6 +32,8 @@ export function TherapyArena({
   onDragChange,
 }: {
   state: GameState;
+  speakingId: string | null;
+  speechActive: boolean;
   beat?: Beat;
   cue: Cue;
   paused: boolean;
@@ -174,7 +178,7 @@ export function TherapyArena({
                 >
                   <TabCharacter
                     character={character}
-                    speaking={speaking && (!state.actionCue || cue === 'talk')}
+                    speaking={speechActive && character.id === speakingId}
                     gaze={speaking ? 0 : Math.sign(actorSeat[0] - x)}
                   />
                   {speaking && (

@@ -3776,3 +3776,23 @@ h1 em {
     flex-wrap: wrap;
   }
 }
+.preview-delivery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 16px 0;
+  font-size: 13px;
+}
+.preview-delivery select {
+  padding: 8px 12px;
+  border: 1px solid #cdd5c8;
+  border-radius: 7px;
+  background: #fffef7;
+  color: #29433d;
+  text-transform: capitalize;
+}
+.preview-delivery small {
+  color: #65775f;
+  font-size: 11px;
+}

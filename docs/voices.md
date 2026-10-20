@@ -1,6 +1,33 @@
-# Expressive voice setup
+# Local voice setup
 
-The main speech engine uses ElevenLabs through a local Node server. The therapist has a dedicated voice. Each tab gets a separate voice when the account has enough voices; otherwise the studio explicitly reports shared voices. A 12-tab session needs 13 available voices for fully distinct casting.
+Kokoro is the default speech engine. It runs on your computer through the local Node server and a persistent Python worker. No API key or cloud speech service is required.
+
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if needed, then run `npm run voice:setup`. This downloads Python 3.12, dependencies, the Kokoro model, and 13 English voices. Setup needs internet and roughly 1.5 GB of disk space. It does not send tab data.
+2. For the extension, set `TA_EXTENSION_ID` in the Git-ignored `.env` to the ID from `brave://extensions`. No ElevenLabs key is needed. The web demo requires no environment configuration.
+3. Run `npm run voice:server` and keep it running. Reload the rebuilt extension.
+4. In **Audio settings**, keep **Kokoro local voices** selected. **Connect Kokoro** checks readiness and grants optional localhost access. Turning sound on also requests that permission if needed.
+5. Enable sound. George is reserved for the therapist; the 12 other voices are automatically distributed across the tabs without reuse. Casting is stable when the cast order changes and persists on reload. Every voice can still be overridden.
+6. Use **Preview delivery** to audition a voice as neutral, happy, smug, angry, shocked, crying, suspicious, or victorious. The therapist retains a measured, confident delivery. Previews pause the session.
+
+After setup, the worker forces Hugging Face and Transformers offline mode. All voices are preloaded from the local cache. The speech route never calls ElevenLabs and does not silently switch engines on failure. Models live in `.local-voices/`, the isolated Python environment in `.venv-kokoro/`; neither is committed or bundled into the extension.
+
+## Reaction delivery and limits
+
+Kokoro does not expose an emotion-tag API. This implementation directs pacing, sentence pauses, and restrained gain: faster and tighter for frustration, slower and spaced for disappointment, measured pauses for skepticism, and steady delivery for the therapist. It preserves natural pitch and timbre rather than pitch-shifting voices. This provides distinct delivery profiles, not a guarantee of actor-level emotional performance. Voice descriptions describe the intended casting and should be auditioned on your speakers.
+
+Defend, challenge, retirement, victory, and duplicate reactions choose the corresponding delivery profile. The scene clock waits for actual playback to end. Mouth animation begins when audio plays and now also covers reaction lines. Pause, mute, scene changes, and previews cancel old playback. Canceled inference may finish on the local CPU, but its audio is discarded; outstanding inference slots remain bounded so repeated interruptions cannot queue unlimited work.
+
+The server binds to `127.0.0.1:4317`, accepts only configured local/extension origins, validates voice IDs against the installed cast, and caches speech by engine, voice, text, and emotion in bounded memory. Audio and dialogue are not written to disk during ordinary use. The local worker does not log spoken text. Restarting the server clears audio memory.
+
+`npm run voice:verify` is an optional real-model check. It creates six fictional WAV samples under `artifacts/kokoro/`, including therapist, angry, disappointed, skeptical, and matched neutral/sad deliveries. It runs the server with cloud fetching disabled. These deliberate test artifacts contain no real browsing data.
+
+Setup and runtime are supported by the included scripts on macOS/Linux with uv. Windows paths are not yet supported. CPU speech generation may pause the scene while a line is prepared, particularly on the first request. The **Device voices (preview quality)** engine remains available without running a server.
+
+References: [Kokoro implementation](https://github.com/hexgrad/kokoro), [voice roster and evaluations](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md). Kokoro code and model weights use Apache 2.0; dependency licenses are separate.
+
+## Optional ElevenLabs engine
+
+The optional cloud speech engine uses ElevenLabs through a local Node server. The therapist has a dedicated voice. Each tab gets a separate voice when the account has enough voices; otherwise the studio explicitly reports shared voices. A 12-tab session needs 13 available voices for fully distinct casting.
 
 1. Open `.env` in the project root. Set `ELEVENLABS_API_KEY` to your key. The file is ignored by Git. Do not add a `VITE_` prefix.
 2. For the extension, copy its ID from `brave://extensions` or the app's Audio settings and set `TA_EXTENSION_ID` in `.env`.

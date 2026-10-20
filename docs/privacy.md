@@ -1,6 +1,6 @@
 # Privacy and permissions
 
-The demo uses authored fictional tabs. The base game has no account, analytics, page scraping, or remote font dependency. Expressive speech is an optional ElevenLabs integration through a local server. A reduced-motion preference is stored in localStorage.
+The demo uses authored fictional tabs. The base game has no account, analytics, page scraping, or remote font dependency. Kokoro is the default speech engine and generates speech locally after a one-time model download. ElevenLabs remains an optional cloud engine. A reduced-motion preference is stored in localStorage.
 
 Game progress is saved in the current browser tab's **sessionStorage**. In real-tabs mode this includes the snapshot's tab titles and URLs plus fictional choices and relationships. It stays on this device; it is not uploaded as a snapshot. If you enable cloud speech, individual spoken lines can include titles and are sent to ElevenLabs. Checkpoints older than 24 hours are rejected on restore. Restart clears game progress. **Forget session** in the extension banner clears both the saved snapshot and game progress and returns to the launcher. A browser may restore sessionStorage when restoring a closed tab, so use Forget session to explicitly remove it.
 
@@ -11,6 +11,8 @@ Pinned, incognito, internal, and currently navigating tabs are excluded. Up to 1
 “Retire from arena” and Undo affect fictional game state only. No code path invokes the Chrome tab removal API.
 
 The **PNG / SVG recap card** and **animated WebM reel** exclude tab names, URLs, IDs, and browsing categories. They contain fictional artwork, an authored award, and aggregate game counts. Video is rendered locally from a generated canvas, with no screen or microphone recording and no upload. The separate **text recap** includes character names, fictional choices, and recent session dialogue; in real mode those names can contain tab titles. Review that file before sharing it. Permission can be revoked through the browser's extension settings or by removing the extension.
+
+Kokoro runtime uses offline model loading and never sends dialogue to a cloud service. Setup downloads dependencies and model files without tab data. Voice assignments are stored locally, and speech audio is cached only in bounded server memory.
 
 Sound is off on entry. ElevenLabs speech requires connecting the local server and enabling sound or explicitly previewing a voice. Dialogue, including tab titles, is sent to ElevenLabs; provider retention and billing apply. The API key stays in the Git-ignored server `.env` file. The extension requests optional access to `http://127.0.0.1/*` only when connecting. Voice IDs and assignments are saved locally; recordings are held only in a bounded server memory cache. Restarting that server clears the cache.
 
