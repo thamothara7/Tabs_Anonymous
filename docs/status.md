@@ -1,4 +1,12 @@
-# Phase four: 19 October 2026 · v0.4.0
+# Phase five: 20 October 2026 · v0.5.0
+
+- Five-chapter animated awards reel with verdict-specific jokes, an ending reveal, caption transcript, pause/replay, scrubbing, and chapter selection.
+- Silent 1200×630 WebM export rendered locally from fictional artwork and aggregate counts. No screen capture, microphone, cloud calls, or browsing details.
+- Reduced-motion preview/export, explicit export cancellation, hidden-tab cancellation, resource cleanup, and unsupported-browser fallback to existing cards.
+- Verification: 46 unit tests and 29 browser tests (three intentional mobile skips), including private-metadata exclusion, real WebM encoding and decoding, desktop/mobile controls, and capture-track cleanup. Browser tests now use an isolated production preview so development-server reloads cannot disrupt a run.
+- ElevenLabs live quality verification still requires the local API key; this phase does not change voice setup.
+
+## Phase four: 19 October 2026 · v0.4.0
 
 - Dedicated therapist casting, per-tab voice assignment, emotional ElevenLabs delivery, cancellable audio, playback-driven scene timing, and explicit local preview mode.
 - Server-only API key, optional loopback permission, exact origin allowlist, request limits, bounded memory cache, and setup documentation.
@@ -44,7 +52,7 @@
 
 1. Manually verify native permission grant/denial and browser-specific behavior in Chrome/Brave. Automated native tests pregrant permissions in an isolated profile; adapter tests cover grouping failures and stale data.
 2. Publish a public zero-permission demo. The repository is private; no external hosting is configured.
-3. Exact shared-element tab-strip breakout, richer chair physics, additional comedic timing, animated video recap, and submission recording.
+3. Exact shared-element tab-strip breakout, richer chair physics, additional comedic timing, full session replay, and submission recording.
 4. Side-panel launcher, extension icons/store submission, and exhaustive accessibility/performance audits.
 5. Confirm hackathon eligibility/deadline independently.
 

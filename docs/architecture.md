@@ -62,3 +62,7 @@ PNG export rasterizes the self-contained SVG locally at 1200×630. Both formats 
 The client casts one voice per actor and reserves the main voice for the therapist. Cloud speech uses a loopback-only Node server; the key never enters client code. The server calls ElevenLabs with controlled emotional tags. The client aborts obsolete fetches, stops the previous audio element, revokes object URLs, and guards completion callbacks with a generation counter. Scenes wait for cloud speech completion instead of running on a fixed speech estimate. Device synthesis is an explicitly selected preview engine.
 
 Character labels have fixed row space independent of the artwork. Dialogue selection filters recently used punchlines across the cast, with bounded history restored from checkpoints. The extension icons rasterize the existing SVG brand mark; generated PNG assets are committed and packaged without needing browser automation during a normal build.
+
+## Phase five: animated recap
+
+`createReel` projects game state into aggregate counts and authored strings, excluding all tab metadata and history. One deterministic canvas renderer powers a React preview and a separate offscreen recording canvas. The preview starts paused and exposes chapter buttons, a timeline, and captions outside the canvas. A local MediaRecorder captures only the generated canvas at 30 fps. Abort, hidden-tab, unmount, recorder error, and timeout paths stop capture tracks and release animation frames. No new permission or dependency is required.

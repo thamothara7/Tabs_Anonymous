@@ -10,7 +10,7 @@ Pinned, incognito, internal, and currently navigating tabs are excluded. Up to 1
 
 “Retire from arena” and Undo affect fictional game state only. No code path invokes the Chrome tab removal API.
 
-The **PNG / SVG recap card** excludes tab names, URLs, IDs, and browsing categories. It contains a fictional award and aggregate game counts. The separate **text recap** includes character names, fictional choices, and recent session dialogue; in real mode those names can contain tab titles. Review that file before sharing it. Permission can be revoked through the browser's extension settings or by removing the extension.
+The **PNG / SVG recap card** and **animated WebM reel** exclude tab names, URLs, IDs, and browsing categories. They contain fictional artwork, an authored award, and aggregate game counts. Video is rendered locally from a generated canvas, with no screen or microphone recording and no upload. The separate **text recap** includes character names, fictional choices, and recent session dialogue; in real mode those names can contain tab titles. Review that file before sharing it. Permission can be revoked through the browser's extension settings or by removing the extension.
 
 Sound is off on entry. ElevenLabs speech requires connecting the local server and enabling sound or explicitly previewing a voice. Dialogue, including tab titles, is sent to ElevenLabs; provider retention and billing apply. The API key stays in the Git-ignored server `.env` file. The extension requests optional access to `http://127.0.0.1/*` only when connecting. Voice IDs and assignments are saved locally; recordings are held only in a bounded server memory cache. Restarting that server clears the cache.
 

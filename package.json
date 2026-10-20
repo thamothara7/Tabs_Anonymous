@@ -1,6 +1,6 @@
 {
   "name": "tabs-anonymous",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "build:extension": "tsc --noEmit && vite build --config vite.extension.config.ts && node scripts/package-extension.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
-    "test:e2e": "npm run build:extension && playwright test",
+    "test:e2e": "npm run build && npm run build:extension && playwright test",
     "check": "tsc --noEmit && vitest run",
     "format": "prettier --write apps packages tests scripts *.ts *.json *.html docs/*.md README.md",
     "voice:server": "node --env-file-if-exists=.env --experimental-strip-types apps/voice-server/server.ts"

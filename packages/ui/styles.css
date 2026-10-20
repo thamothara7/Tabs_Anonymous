@@ -3648,3 +3648,131 @@ h1 em {
   align-items: center;
   gap: 4px;
 }
+
+.recap-reel {
+  margin: 28px 0;
+  padding: 20px;
+  text-align: left;
+  border: 1px solid var(--line, #d9ddce);
+  border-radius: 16px;
+  background: #f8f8ef;
+  color: #283b36;
+}
+.reel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.reel-heading h3 {
+  font-size: 22px;
+  margin: 8px 0 0;
+}
+.reel-duration {
+  font: 10px monospace;
+  white-space: nowrap;
+  color: #6d7d68;
+}
+.recap-reel canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1200 / 630;
+  border-radius: 10px;
+}
+.reel-chapters {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin: 12px 0;
+}
+.reel-chapters button {
+  border: 1px solid #d3d9ca;
+  padding: 9px 4px;
+  border-radius: 7px;
+  background: transparent;
+  color: #50644e;
+  font-size: 11px;
+  min-height: 44px;
+}
+.reel-chapters button span {
+  display: block;
+  font: 10px monospace;
+  margin-bottom: 3px;
+}
+.reel-chapters button[aria-pressed='true'] {
+  background: #263f3e;
+  border-color: #263f3e;
+  color: #f5f1dc;
+}
+.recap-reel .reel-caption {
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 48px;
+  margin: 12px 0;
+  color: #465744;
+}
+.reel-timeline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+}
+.reel-timeline input {
+  flex: 1;
+  min-width: 40px;
+  accent-color: #527966;
+}
+.reel-timeline span {
+  min-width: 48px;
+}
+.reel-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.reel-controls .button {
+  padding: 10px 12px;
+  min-height: 44px;
+}
+.reel-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.recap-reel > p[role='status'] {
+  font-size: 12px;
+  margin: 14px 0 8px;
+  color: #52654f;
+}
+.recap-reel > small {
+  display: block;
+  line-height: 1.6;
+  font-size: 11px;
+  color: #65765e;
+}
+.recap-reel progress {
+  width: 100%;
+  accent-color: #577c65;
+  margin-top: 16px;
+}
+@media (max-width: 650px) {
+  .recap-reel {
+    padding: 12px;
+  }
+  .reel-heading {
+    align-items: start;
+  }
+  .reel-heading h3 {
+    font-size: 18px;
+  }
+  .reel-duration {
+    font-size: 9px;
+  }
+  .reel-timeline {
+    flex-wrap: wrap;
+  }
+}

@@ -48,6 +48,7 @@ import { autoCast, deliveryFor, loadVoiceCasting, type CastVoice } from './voice
 import { VotePanel } from './VotePanel';
 import { loadSession, saveSession } from '../game-core/session';
 import { TherapyArena } from './TherapyArena';
+import { RecapReel } from './RecapReel';
 
 function readPreference(key: string, fallback: boolean) {
   try {
@@ -479,6 +480,7 @@ export function App({
                   alt={`Share card: ${ending.title}. ${kept} kept, ${state.characters.filter((c) => c.fate === 'group').length} grouped, ${state.characters.filter((c) => c.fate === 'retire').length} retired.`}
                 />
               </details>
+              <RecapReel state={state} reduced={reduced} />
               <div className="result-actions">
                 <button
                   className="button orange"

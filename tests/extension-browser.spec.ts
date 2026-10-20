@@ -30,17 +30,17 @@ test('native Chromium grouping, cancel, protected tabs, and reload recovery', as
     const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
     const id = new URL(worker.url()).hostname;
     const first = await context.newPage();
-    await first.goto('http://127.0.0.1:5173/?fixture=event');
+    await first.goto('http://127.0.0.1:4173/?fixture=event');
     await first.evaluate(() => {
       document.title = 'Local hackathon overview';
     });
     const second = await context.newPage();
-    await second.goto('http://127.0.0.1:5173/?fixture=study');
+    await second.goto('http://127.0.0.1:4173/?fixture=study');
     await second.evaluate(() => {
       document.title = 'Java DSA Study Guide';
     });
     const pinned = await context.newPage();
-    await pinned.goto('http://127.0.0.1:5173/?fixture=pinned');
+    await pinned.goto('http://127.0.0.1:4173/?fixture=pinned');
     const arena = await context.newPage();
     await arena.goto(`chrome-extension://${id}/index.html#arena`);
     expect(
@@ -100,7 +100,7 @@ test('native Chromium grouping, cancel, protected tabs, and reload recovery', as
     expect(after.tabs.find((t) => t.url?.includes('fixture=pinned'))?.groupId).toBe(-1);
     expect(after.tabs.filter((t) => t.url?.includes('fixture='))).toHaveLength(3);
     // A changed URL must invalidate restore rather than blindly reviving the old snapshot.
-    await first.goto('http://127.0.0.1:5173/?fixture=navigated');
+    await first.goto('http://127.0.0.1:4173/?fixture=navigated');
     await arena.reload();
     await expect(arena.getByRole('alert')).toContainText('Your tabs changed');
     await expect(arena.getByRole('button', { name: 'Connect this window' })).toBeVisible();
