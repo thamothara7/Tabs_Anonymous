@@ -3688,3 +3688,25 @@ h1 em {
   color: #65775f;
   font-size: 11px;
 }
+
+.dialogue-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  border-top: 1px solid var(--line);
+  color: #52644f;
+  font-size: 12px;
+  background: #f0f2e8;
+}
+.dialogue-status .button {
+  padding: 7px 12px;
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .dialogue-status {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+}

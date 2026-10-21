@@ -1,4 +1,12 @@
-# Phase seven: 20 October 2026 · v0.7.0
+# Phase eight: 21 October 2026 · v0.8.0
+
+- Fixed native extension speech requests without an Origin header. Exact configured extension identity is accepted; unrelated website origins remain blocked. Permission is requested inside the user gesture and failures show the underlying cause.
+- Local Qwen3 conversations use tab topics, personalities, verdicts, and previous speakers. The therapist mediates; tabs answer each other through existing microphone, roast, and witness interactions. Generated captions are read by the existing distinct Kokoro cast. AI failures explicitly continue scripted dialogue with Retry.
+- Canceled or stale generations cannot replace a newer turn. Generation pauses the scene clock; recorded replies become subsequent context and session highlights.
+- macOS login services keep Kokoro and the local writer available, with an explicit uninstall command. No cloud API or key is needed.
+- Verification: 55 unit tests and 34 browser tests passed, with four intentional mobile skips. Native extension transport, desktop/mobile conversation, stale replies, and interruption paths are covered. Real local AI replies were decoded and played in Chromium using George (7.995 seconds) and Bella (7.545 seconds); pause stopped playback while keeping captions visible. Physical speaker quality still needs a device check. See [local AI setup](ai.md).
+
+## Phase seven: 20 October 2026 · v0.7.0
 
 - Removed Audio settings, manual casting, voice previews, engine selection, cloud routes, and browser synthesis. One Sound toggle connects to Kokoro, with a cancelable warmup and compact retry status. George is always the therapist and twelve distinct tab voices are assigned automatically; old overrides are ignored.
 - Dialogue now incorporates bounded title topics, related tabs, domain counts, duplicates, audible status, prior defense, and verdicts. Local authored templates remain the writing engine, with no page reading or language-model inference.

@@ -1,6 +1,6 @@
 {
   "name": "tabs-anonymous",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,7 +14,10 @@
     "format": "prettier --write apps packages tests scripts *.ts *.json *.html docs/*.md README.md",
     "voice:verify": "node --experimental-strip-types scripts/verify-kokoro.ts",
     "voice:setup": "node scripts/setup-kokoro.mjs",
-    "voice:server": "node --env-file-if-exists=.env --experimental-strip-types apps/voice-server/server.ts"
+    "voice:server": "node --env-file-if-exists=.env --experimental-strip-types apps/voice-server/server.ts",
+    "local:start": "node scripts/local-services.mjs",
+    "local:stop": "node scripts/local-services.mjs --stop",
+    "ai:setup": "node scripts/setup-ai.mjs"
   },
   "dependencies": {
     "@fontsource/dm-sans": "^5.3.0",

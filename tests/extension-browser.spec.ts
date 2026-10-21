@@ -1,4 +1,4 @@
-import { test, expect, chromium } from '@playwright/test';
+import { test, expect, chromium } from './fixtures';
 import { mkdtemp, cp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -27,6 +27,9 @@ test('native Chromium grouping, cancel, protected tabs, and reload recovery', as
     args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
   });
   try {
+    await context.route('http://127.0.0.1:4317/dialogue', (route) =>
+      route.fulfill({ status: 503, json: { error: 'Scripted test.' } }),
+    );
     const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
     const id = new URL(worker.url()).hostname;
     const first = await context.newPage();

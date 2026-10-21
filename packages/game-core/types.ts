@@ -62,6 +62,16 @@ export interface GameState {
   history: string[];
 }
 export type GameAction =
+  | {
+      type: 'RECORD_DIALOGUE';
+      phase: GameState['phase'];
+      seed: number;
+      beat: number;
+      serial: number;
+      speaker: string;
+      line: string;
+      emotion: Emotion;
+    }
   | { type: 'START' }
   | { type: 'NEXT' }
   | { type: 'SELECT'; id: string }

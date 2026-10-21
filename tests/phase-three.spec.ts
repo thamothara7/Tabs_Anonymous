@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('roast, balcony, and recovery keep every character reachable', async ({ page }, info) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { KOKORO_VOICES } from '../packages/ui/voices';
 
 test('one sound control automatically casts Kokoro and keeps witness voices and reactions distinct', async ({
@@ -35,6 +35,10 @@ test('one sound control automatically casts Kokoro and keeps witness voices and 
   });
   const calls: { voiceId: string; emotion: string; therapist: boolean; text: string }[] = [];
   await page.route('http://127.0.0.1:4317/**', async (route) => {
+    if (route.request().url().endsWith('/dialogue')) {
+      await route.fallback();
+      return;
+    }
     if (route.request().url().endsWith('/kokoro/voices')) {
       await route.fulfill({ json: { voices: KOKORO_VOICES } });
     } else {
@@ -106,7 +110,7 @@ test('unavailable Kokoro has a compact retry and never falls back to browser spe
   );
   await page.goto('/');
   await page.getByRole('button', { name: 'Sound off', exact: true }).click();
-  await expect(page.locator('.sound-status')).toContainText('Kokoro is unavailable');
+  await expect(page.locator('.sound-status')).toContainText('Worker unavailable');
   await expect(page.getByRole('button', { name: 'Sound off', exact: true })).toBeVisible();
   available = true;
   await page.getByRole('button', { name: 'Retry sound', exact: true }).click();

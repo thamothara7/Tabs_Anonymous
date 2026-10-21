@@ -77,3 +77,13 @@ Character labels have fixed row space independent of the artwork. Dialogue selec
 `WITNESS` preserves the selected defendant while setting `actionTarget` to the witness. The witness receives a skeptical expression and speaks in its own voice. Repeat calls rotate through peers; testimony incorporates the defendant's verdict or prior defense. The same cancellable reaction clock and bounded history apply. Single-character casts disable the action.
 
 The extension's **Refresh cast and restart** explicitly takes a new snapshot, clears the previous game checkpoint, and remounts the shared App with the fresh cast. A failed refresh retains the old session and displays the error. Actual browser groups remain independent and untouched by this action.
+
+## Phase eight: local conversation writer
+
+`useDialogue` captures metadata and the latest six history lines once per turn, requests a bounded response, and caches it by session, phase, beat, reaction serial, and speaker. Changing the inspected dossier does not change the speaker. AI waiting pauses the director and speech; when ready, the generated line becomes both caption and speech. Skip, interruption, pause, and unmount abort obsolete requests. Reducer guards reject responses for old turns. Generated emotions change delivery, never the verdict.
+
+`/dialogue` accepts a validated cast of at most 12 and delegates only to `127.0.0.1:11434` with the fixed `qwen3:4b` model, structured JSON output, no thinking, bounded context, and one active generation. Titles and history are untrusted data. Output length, emotion, and repeated lines are checked. AI failures explicitly switch to scripted dialogue with Retry; no cloud fallback exists.
+
+Native extension requests may omit Origin. The transport includes the runtime extension ID; absent-Origin requests must match the configured extension exactly. Requests with a website Origin still require the origin allowlist. User-gesture permission ordering is preserved. A native Chromium integration test covers the real header behavior; normal UI tests isolate the writer from locally installed models.
+
+On macOS, `local:start` registers two user launch agents: the loopback voice backend and an Ollama server with cloud disabled. Both run at login and restart on exit. `local:stop` removes only these agents. Models and runtimes remain independently installed.

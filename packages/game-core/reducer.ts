@@ -22,6 +22,31 @@ export function initialState(characters: Character[], seed = 42): GameState {
   };
 }
 export function reducer(state: GameState, action: GameAction): GameState {
+  if (action.type === 'RECORD_DIALOGUE') {
+    if (
+      state.phase !== action.phase ||
+      state.seed !== action.seed ||
+      state.beat !== action.beat ||
+      state.actionSerial !== action.serial ||
+      !['playing', 'voting'].includes(state.phase) ||
+      action.line.length > 320
+    )
+      return state;
+    const speaker = state.characters.find((c) => c.id === action.speaker);
+    if (!speaker && action.speaker !== 'therapist') return state;
+    const replacedScript =
+      state.actionLine ?? storyFor(state.characters, state.seed)[state.beat]?.line;
+    return {
+      ...state,
+      history: [
+        ...state.history.filter((line) => line !== replacedScript),
+        `${speaker ? speaker.title.slice(0, 42) : 'The therapist'}: ${action.line}`,
+      ].slice(-80),
+      characters: state.characters.map((c) =>
+        c.id === action.speaker ? { ...c, emotion: action.emotion } : c,
+      ),
+    };
+  }
   if (action.type === 'RESET') return initialState(action.characters, state.seed + 1);
   if (action.type === 'SELECT')
     return state.characters.some((c) => c.id === action.id)

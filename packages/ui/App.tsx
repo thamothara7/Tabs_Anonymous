@@ -43,10 +43,18 @@ import { TabCharacter } from './TabCharacter';
 import { recapSvg, recapText, downloadFile, downloadPng } from './recap';
 import { votingLine, shortTitle } from '../game-core/dialogue';
 import { SessionAudio, lineDuration } from './audio';
-import { autoCast, deliveryFor, KOKORO_VOICES, connectKokoro } from './voices';
+import {
+  autoCast,
+  deliveryFor,
+  KOKORO_VOICES,
+  connectKokoro,
+  ensureVoicePermission,
+  localConnectionError,
+} from './voices';
 import { VotePanel } from './VotePanel';
 import { loadSession, saveSession } from '../game-core/session';
 import { TherapyArena } from './TherapyArena';
+import { useDialogue, dialogueScene } from './useDialogue';
 import { RecapReel } from './RecapReel';
 
 function readPreference(key: string, fallback: boolean) {
@@ -105,7 +113,7 @@ export function App({
   const selected = state.characters.find((c) => c.id === state.selected) ?? state.characters[0];
   const duplicates = duplicateGroups(cast);
   const active = state.phase === 'playing' || state.phase === 'voting';
-  const line =
+  const fallbackLine =
     state.actionLine ??
     (state.phase === 'voting'
       ? votingLine(state)
@@ -120,6 +128,35 @@ export function App({
       : beat?.speaker;
   const speaker = state.characters.find((c) => c.id === speakerId);
   const cue = state.actionCue ?? beat?.cue ?? 'talk';
+  const dialogue = useDialogue(
+    state,
+    speakerId ?? 'therapist',
+    state.actionLine
+      ? state.actionCue === 'popcorn'
+        ? state.actionTarget
+        : state.selected
+      : (beat?.target ?? null),
+    dialogueScene(state, beat?.label ?? 'Welcome the cast'),
+    fallbackLine,
+    paused || !!modal,
+    (text, emotion) =>
+      dispatch({
+        type: 'RECORD_DIALOGUE',
+        phase: state.phase,
+        seed: state.seed,
+        beat: state.beat,
+        serial: state.actionSerial,
+        speaker: speakerId ?? 'therapist',
+        line: text,
+        emotion,
+      }),
+  );
+  const line = dialogue.line;
+  const startSession = () => {
+    void dialogue.enable();
+    dispatch({ type: 'START' });
+  };
+
   const round = state.phase === 'results' || state.phase === 'voting' ? 3 : state.beat >= 5 ? 2 : 1;
   const kept = state.characters.filter((c) => c.fate === 'keep').length;
   const remaining = state.characters.filter((c) => c.fate === 'undecided').length;
@@ -151,9 +188,18 @@ export function App({
     return () => d.cancelAll();
   }, [state.phase, state.beat, state.actionSerial, state.actionLine, active, beat, line]);
   useEffect(() => {
-    if (paused || modal || voiceHold) director.current.pause();
+    if (paused || modal || voiceHold || dialogue.pending) director.current.pause();
     else director.current.resume();
-  }, [paused, modal, voiceHold, state.phase, state.beat, state.actionSerial, line]);
+  }, [
+    paused,
+    modal,
+    voiceHold,
+    dialogue.pending,
+    state.phase,
+    state.beat,
+    state.actionSerial,
+    line,
+  ]);
   useEffect(() => {
     try {
       localStorage.setItem('ta-motion-reduced', String(reduced));
@@ -168,9 +214,14 @@ export function App({
   }, [toast]);
   useEffect(() => {
     const engine = audio.current;
-    if (!sound || paused || modal) {
+    if (!sound || paused || modal || dialogue.pending) {
       engine.stop();
-      if (sound) setAudioMessage('Speech paused. Resume to continue the conversation.');
+      if (sound)
+        setAudioMessage(
+          dialogue.pending
+            ? 'Waiting for the cast to find their words…'
+            : 'Speech paused. Resume to continue the conversation.',
+        );
       return;
     }
     if (!active) {
@@ -179,7 +230,10 @@ export function App({
     }
     engine.effect(cue);
     const assigned = voiceMap[speakerId ?? 'therapist'];
-    const delivery = deliveryFor(speaker, cue);
+    const delivery = deliveryFor(
+      speaker && dialogue.emotion ? { ...speaker, emotion: dialogue.emotion } : speaker,
+      cue,
+    );
     setVoiceHold(true);
     setAudioMessage(`Preparing ${speaker ? shortTitle(speaker, 32) : 'the therapist'}…`);
     setSpeechPlaying(false);
@@ -194,14 +248,12 @@ export function App({
         setAudioMessage('Local voices ready. George leads; every tab has its own voice.');
         if (state.phase === 'playing' || state.actionLine) director.current.skipCurrent();
       },
-      () => {
+      (message) => {
         setVoiceHold(false);
         setSpeechPlaying(false);
         setSound(false);
         setAudioError(true);
-        setAudioMessage(
-          'Could not play local speech. Check that Kokoro is running and this browser tab is unmuted.',
-        );
+        setAudioMessage(message);
       },
       () => {
         setSpeechPlaying(true);
@@ -228,6 +280,7 @@ export function App({
     voiceMap,
     replay,
     speakerId,
+    dialogue.pending,
   ]);
   useEffect(
     () => () => {
@@ -276,16 +329,17 @@ export function App({
     setAudioError(false);
     setAudioMessage('Warming up Kokoro on this computer. The first connection can take a minute.');
     try {
-      await audio.current.unlock();
+      // Start both APIs inside the click, before the first asynchronous boundary.
+      await Promise.all([ensureVoicePermission(), audio.current.unlock()]);
       await connectKokoro(controller.signal);
       if (controller.signal.aborted) return;
       setSound(true);
       audio.current.effect('victory');
       setAudioMessage('Local voices ready. George leads; every tab has its own voice.');
-    } catch {
+    } catch (error) {
       if (!controller.signal.aborted) {
         setAudioError(true);
-        setAudioMessage('Kokoro is unavailable. Start the local voice service, then retry sound.');
+        setAudioMessage(localConnectionError(error));
       }
     } finally {
       if (connection.current === controller) setConnectingAudio(false);
@@ -546,13 +600,13 @@ export function App({
               <TherapyArena
                 state={state}
                 speakingId={speaker?.id ?? null}
-                speechActive={!sound || speechPlaying}
+                speechActive={!dialogue.pending && (!sound || speechPlaying)}
                 beat={beat}
                 cue={cue}
                 reduced={reduced}
                 paused={paused || !!modal}
                 onSelect={select}
-                onStart={() => dispatch({ type: 'START' })}
+                onStart={startSession}
                 onDrop={drop}
                 onDragChange={setDragging}
               />
@@ -586,15 +640,20 @@ export function App({
                     </span>
                   </div>
                   <p aria-hidden="true">
-                    {reduced ||
-                    voiceHold ||
-                    state.phase === 'lobby' ||
-                    (state.phase === 'voting' && !state.actionLine)
-                      ? line
-                      : line.slice(0, Math.floor(elapsed / 23))}
+                    {dialogue.pending
+                      ? 'The cast is improvising. One moment…'
+                      : paused ||
+                          dialogue.enabled ||
+                          reduced ||
+                          voiceHold ||
+                          state.phase === 'lobby' ||
+                          (state.phase === 'voting' && !state.actionLine)
+                        ? line
+                        : line.slice(0, Math.floor(elapsed / 23))}
                   </p>
                   <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-                    {speaker?.name ?? 'Therapist'}: {line}
+                    {speaker?.name ?? 'Therapist'}:{' '}
+                    {dialogue.pending ? 'The cast is improvising. One moment…' : line}
                   </p>
                 </div>
                 <span className="caption-on">CC</span>
@@ -685,6 +744,25 @@ export function App({
                     ))}
                   </div>
                 </div>
+              </div>
+              <div className="dialogue-status">
+                <span role="status">{dialogue.status}</span>
+                <button
+                  className="button"
+                  onClick={() =>
+                    dialogue.enabled || dialogue.connecting
+                      ? dialogue.disable()
+                      : void dialogue.enable()
+                  }
+                >
+                  {dialogue.connecting || dialogue.pending
+                    ? 'Use scripted lines'
+                    : dialogue.enabled
+                      ? 'AI dialogue on'
+                      : dialogue.failed
+                        ? 'Retry AI dialogue'
+                        : 'Enable AI dialogue'}
+                </button>
               </div>
               <div className={`sound-status ${audioError ? 'has-error' : ''}`}>
                 <span role="status">{audioMessage}</span>
@@ -959,9 +1037,10 @@ function InfoModal({
               pinned tabs, and internal pages from grouping.
             </p>
             <p>
-              Speech is generated by Kokoro on this computer. Dialogue uses tab titles, domains,
-              shared topics, and your decisions. No page content is read, and no dialogue is sent to
-              a cloud provider. Voice casting is automatic and is not saved as a preference.
+              Kokoro generates speech on this computer. The local AI writer receives bounded tab
+              titles, domains, personalities, fictional decisions, and recent dialogue to write
+              replies. Scripted lines continue if AI is unavailable. No page content is read, and no
+              dialogue is sent to a cloud provider. Voice casting is automatic.
             </p>
             <p>
               Arena retirements are fiction. Real tab grouping requires a separate preview and an

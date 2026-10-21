@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { readFile } from 'node:fs/promises';
 test('complete demo, consequences, and recap', async ({ page }, info) => {
   const errors: string[] = [];

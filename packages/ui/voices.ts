@@ -89,6 +89,14 @@ export function deliveryFor(
   return { emotion, pitch, rate, label };
 }
 export const VOICE_SERVER = 'http://127.0.0.1:4317';
+export function serviceHeaders(): Record<string, string> {
+  return {
+    'X-TA-Client': '1',
+    ...(typeof chrome !== 'undefined' && chrome.runtime?.id
+      ? { 'X-TA-Extension-ID': chrome.runtime.id }
+      : {}),
+  };
+}
 export async function ensureVoicePermission(): Promise<void> {
   if (
     typeof chrome !== 'undefined' &&
@@ -96,20 +104,34 @@ export async function ensureVoicePermission(): Promise<void> {
     location.protocol === 'chrome-extension:'
   ) {
     if (!(await chrome.permissions.request({ origins: ['http://127.0.0.1/*'] })))
-      throw new Error('Local voice server permission was not granted.');
+      throw new Error(
+        'Localhost permission was not granted. Click Retry sound and allow access to 127.0.0.1.',
+      );
   }
 }
 export async function connectKokoro(signal: AbortSignal): Promise<void> {
-  await ensureVoicePermission();
   signal.throwIfAborted();
   const response = await fetch(`${VOICE_SERVER}/kokoro/voices`, {
-    headers: { 'X-TA-Client': '1' },
+    headers: serviceHeaders(),
     signal: AbortSignal.any([signal, AbortSignal.timeout(120000)]),
   });
   const data = await response.json();
-  if (
-    !response.ok ||
-    !KOKORO_VOICES.every((v) => data.voices?.some((item: CastVoice) => item.id === v.id))
-  )
-    throw new Error('Kokoro voices are not ready.');
+  if (!response.ok) throw new Error(data.error ?? `Local service returned ${response.status}.`);
+  if (!KOKORO_VOICES.every((v) => data.voices?.some((item: CastVoice) => item.id === v.id)))
+    throw new Error('Kokoro voices are missing. Run npm run voice:setup once.');
+}
+
+export function localConnectionError(error: unknown): string {
+  if (error instanceof Error) {
+    if (/gesture|permission/i.test(error.message))
+      return 'Localhost access is blocked. Retry and allow access to 127.0.0.1 in the browser prompt.';
+    if (error.name === 'TimeoutError')
+      return 'Local startup timed out. Retry once the model finishes loading.';
+    if (error instanceof TypeError)
+      return 'Cannot reach the local service. Check localhost access in extension settings, or run npm run local:start.';
+    if (/suspended|audio/i.test(error.message))
+      return 'The browser could not enable audio. Unmute this tab and retry.';
+    return error.message;
+  }
+  return 'Local connection failed. Retry to reconnect.';
 }

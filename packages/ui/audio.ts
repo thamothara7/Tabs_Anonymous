@@ -1,4 +1,4 @@
-import { VOICE_SERVER } from './voices';
+import { VOICE_SERVER, serviceHeaders } from './voices';
 import type { Cue } from '../game-core/types';
 
 /** All effects are generated locally; speech uses Kokoro on this computer. */
@@ -34,7 +34,7 @@ export class SessionAudio {
     try {
       const response = await fetch(`${VOICE_SERVER}/kokoro/speech`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-TA-Client': '1' },
+        headers: { 'Content-Type': 'application/json', ...serviceHeaders() },
         body: JSON.stringify({ text, voiceId, emotion, therapist }),
         signal: controller.signal,
       });

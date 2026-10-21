@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('all twelve labels stay clear of other character art', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
