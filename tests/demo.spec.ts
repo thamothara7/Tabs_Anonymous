@@ -3,6 +3,16 @@ import { readFile } from 'node:fs/promises';
 test('complete demo, consequences, and recap', async ({ page }, info) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function (callback, type, quality) {
+      if (type === 'image/png') {
+        const count = Number(document.documentElement.dataset.pngEncodes ?? 0);
+        document.documentElement.dataset.pngEncodes = String(count + 1);
+      }
+      return original.call(this, callback, type, quality);
+    };
+  });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await expect(
@@ -44,6 +54,7 @@ test('complete demo, consequences, and recap', async ({ page }, info) => {
   expect(png.readUInt32BE(16)).toBe(2400);
   expect(png.readUInt32BE(20)).toBe(1350);
   await expect(page.locator('.png-award img')).toHaveAttribute('src', /^blob:/);
+  await expect(page.locator('html')).toHaveAttribute('data-png-encodes', '1');
   await expect(page.getByRole('button', { name: 'Save SVG', exact: true })).toHaveCount(0);
   await page.screenshot({ path: `artifacts/${info.project.name}-results.png`, fullPage: true });
   expect(errors).toEqual([]);

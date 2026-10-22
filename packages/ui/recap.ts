@@ -40,7 +40,20 @@ export function recapText(state: GameState): string {
   const moments = sessionHighlights(state, 12);
   return `TABS ANONYMOUS\nSESSION RECAP\n\n${ending.title}\n${ending.description}\n\nTHE VERDICT\n${state.characters.length} featured tabs: ${counts[0]} kept, ${counts[1]} grouped, ${counts[2]} retired.\n\n${sections.join('\n\n')}\n\nSESSION HIGHLIGHTS\n${moments.map((h, i) => `${i + 1}. ${h}`).join('\n\n') || 'No conversation was recorded in this session.'}\n\nABOUT THIS RECAP\nThese are fictional arena verdicts. No browser tabs were closed.\nNative grouping, if separately approved, is not recorded here.\nIncludes tab titles and session dialogue. Review before sharing.\nPage URLs are not added; links inside titles or dialogue are omitted.\n`;
 }
-export async function awardPng(state: GameState): Promise<Blob> {
+// Preview and download share one encode, including while it is still pending.
+// Weak keys release the image when the completed session is no longer retained.
+const awardImages = new WeakMap<GameState, Promise<Blob>>();
+export function awardPng(state: GameState): Promise<Blob> {
+  const existing = awardImages.get(state);
+  if (existing) return existing;
+  const pending = renderAwardPng(state).catch((error: unknown) => {
+    awardImages.delete(state);
+    throw error;
+  });
+  awardImages.set(state, pending);
+  return pending;
+}
+async function renderAwardPng(state: GameState): Promise<Blob> {
   await document.fonts.ready;
   const canvas = document.createElement('canvas');
   canvas.width = CARD_WIDTH;
