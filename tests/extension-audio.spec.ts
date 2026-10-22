@@ -77,7 +77,7 @@ test('native extension connects to Kokoro without Origin and sends AI dialogue t
     await page.getByRole('button', { name: 'Sound off', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Sound on', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Start therapy' }).click();
-    await expect.poll(() => speech.length).toBe(1);
+    await expect.poll(() => speech.length).toBeGreaterThanOrEqual(1);
     expect(speech[0]).toMatchObject({
       voiceId: 'bm_george',
       therapist: true,

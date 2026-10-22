@@ -98,3 +98,35 @@ test('a failed local writer continues with captions and provides a retry without
   await page.getByRole('button', { name: 'Retry AI dialogue' }).click();
   await expect(page.locator('.caption-copy [role="status"]')).toContainText('We are back');
 });
+
+test('prepares the next turn during the current line and reuses it after Skip', async ({
+  page,
+}) => {
+  const requests: any[] = [];
+  await page.route('http://127.0.0.1:4317/dialogue', async (route) => {
+    const input = route.request().postDataJSON();
+    requests.push(input);
+    await route.fulfill({
+      json: {
+        line:
+          input.speaker === 'therapist'
+            ? 'The host is ready. This meeting has a surprising number of duplicate opinions.'
+            : 'My next reply was ready before you handed me the microphone.',
+        emotion: 'neutral',
+        source: 'local-ai',
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start therapy', exact: true }).click();
+  await expect.poll(() => requests.length).toBe(2);
+  expect(requests[1].recent.join(' ')).toContain('duplicate opinions');
+  const preparedSpeaker = requests[1].speaker;
+  await page.getByRole('button', { name: 'Skip scene', exact: true }).click();
+  await expect(page.locator('.caption-copy p[aria-hidden="true"]')).toContainText(
+    'ready before you handed',
+  );
+  expect(
+    requests.filter((r) => r.speaker === preparedSpeaker && r.scene === requests[1].scene),
+  ).toHaveLength(1);
+});

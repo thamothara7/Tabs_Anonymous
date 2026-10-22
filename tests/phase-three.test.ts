@@ -2,7 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { demoCharacters } from '../packages/game-core/fixtures';
 import { personalLine, reactionFor } from '../packages/game-core/dialogue';
 import { initialState, reducer } from '../packages/game-core/reducer';
-import { recapText, recapSvg } from '../packages/ui/recap';
+import { recapText } from '../packages/ui/recap';
+import { createReel } from '../packages/ui/reel';
 import { SessionAudio } from '../packages/ui/audio';
 
 describe('personal dialogue and recap', () => {
@@ -28,14 +29,14 @@ describe('personal dialogue and recap', () => {
     expect(recapText(s)).toContain('SESSION HIGHLIGHTS');
     expect(recapText(s)).toContain(first!);
     expect(recapText(s)).not.toContain('https://');
-    expect(recapSvg(s)).not.toContain('LeetCode');
+    expect(JSON.stringify(createReel(s))).not.toContain('LeetCode');
   });
-  it('wraps long award titles and describes an all-retired cast honestly', () => {
+  it('preserves long award titles and describes an all-retired cast honestly', () => {
     const s = initialState(demoCharacters);
     s.characters = s.characters.map((c) => ({ ...c, fate: 'retire' }));
-    expect(recapSvg(s)).toContain('balcony is sold out');
+    expect(createReel(s).counts).toEqual([0, 0, 12]);
     s.characters[1].fate = 'keep';
-    expect(recapSvg(s)).toContain('<tspan x="72" dy="55">Procrastinator</tspan>');
+    expect(createReel(s).chapters[4].title).toContain('Procrastinator');
     const reset = reducer(s, { type: 'RESET', characters: demoCharacters });
     expect(reset.seed).not.toBe(s.seed);
   });

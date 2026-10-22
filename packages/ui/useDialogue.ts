@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Emotion, GameState } from '../game-core/types';
+import type { Cue, Emotion, GameState } from '../game-core/types';
 import { duplicateGroups } from '../game-core/classify';
 import { domainOf } from '../game-core/context';
 import { storyFor } from '../game-core/events';
-import {
-  ensureVoicePermission,
-  localConnectionError,
-  VOICE_SERVER,
-  serviceHeaders,
-} from './voices';
+import { reducer } from '../game-core/reducer';
+import { DialogueClient } from './dialogueClient';
+import { ensureVoicePermission, localConnectionError } from './voices';
 import type { DialogueInput, DialogueResult } from '../../apps/voice-server/dialogue';
 
 export function dialogueContext(
@@ -62,6 +59,8 @@ export function dialogueScene(state: GameState, storyLabel: string): string {
         : 'You have the microphone. Answer the previous speaker and defend your place in this browser.';
   }
 }
+export const dialogueKey = (s: GameState, speaker: string) =>
+  `${s.seed}:${s.phase}:${s.beat}:${s.actionSerial}:${s.actionLine ? 'reaction' : 'scene'}:${speaker}`;
 export function useDialogue(
   state: GameState,
   speaker: string,
@@ -70,6 +69,7 @@ export function useDialogue(
   fallback: string,
   paused: boolean,
   onGenerated: (line: string, emotion: Emotion) => void,
+  onPrepared?: (line: string, emotion: Emotion, speaker: string, cue: Cue) => void,
 ) {
   const [enabled, setEnabled] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -78,11 +78,13 @@ export function useDialogue(
   );
   const [failed, setFailed] = useState(false);
   const [result, setResult] = useState<{ key: string; value: DialogueResult } | null>(null);
-  const cache = useRef(new Map<string, DialogueResult>());
+  const client = useRef(new DialogueClient());
+  const prepare = useRef(onPrepared);
+  prepare.current = onPrepared;
   const activation = useRef(0);
   const callback = useRef(onGenerated);
   callback.current = onGenerated;
-  const key = `${state.seed}:${state.phase}:${state.beat}:${state.actionSerial}:${state.actionLine ? 'reaction' : 'scene'}:${speaker}`;
+  const key = dialogueKey(state, speaker);
   const active = state.phase === 'playing' || state.phase === 'voting';
   const ready = result?.key === key ? result.value : null;
   const enable = async () => {
@@ -107,6 +109,7 @@ export function useDialogue(
   };
   const disable = () => {
     activation.current++;
+    client.current.cancelPending();
     setEnabled(false);
     setConnecting(false);
     setFailed(false);
@@ -115,62 +118,69 @@ export function useDialogue(
   useEffect(
     () => () => {
       activation.current++;
+      client.current.cancelPending();
     },
     [],
   );
   useEffect(() => {
-    if (!enabled || !active || paused) return;
-    const cached = cache.current.get(key);
-    if (cached) {
-      setResult({ key, value: cached });
+    if (!enabled || !active || paused) {
+      client.current.cancelPending();
       return;
     }
-    const controller = new AbortController();
+    let obsolete = false;
+    client.current.retain(key);
     setStatus(`${speaker === 'therapist' ? 'The therapist' : 'The cast'} is improvising…`);
     const complete = callback.current;
     const input = dialogueContext(state, speaker, target, scene);
-    void (async () => {
-      try {
-        const response = await fetch(`${VOICE_SERVER}/dialogue`, {
-          method: 'POST',
-          headers: { ...serviceHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify(input),
-          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(50000)]),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error ?? 'Local AI could not write this line.');
-        if (
-          typeof data.line !== 'string' ||
-          data.line.length < 8 ||
-          data.line.length > 320 ||
-          ![
-            'neutral',
-            'happy',
-            'smug',
-            'angry',
-            'shocked',
-            'crying',
-            'suspicious',
-            'victorious',
-          ].includes(data.emotion) ||
-          data.source !== 'local-ai'
-        )
-          throw new Error('Local AI returned an invalid response.');
-        if (controller.signal.aborted) return;
-        if (cache.current.size >= 40) cache.current.delete(cache.current.keys().next().value!);
-        cache.current.set(key, data);
+    void client.current
+      .request(key, input)
+      .then((data) => {
+        if (obsolete) return;
         setResult({ key, value: data });
         setStatus('AI dialogue · Written on this computer');
-        complete(data.line, data.emotion);
-      } catch (error) {
-        if (controller.signal.aborted) return;
+        if (result?.key !== key) complete(data.line, data.emotion);
+        if (state.phase !== 'playing' || state.actionLine) return;
+        const recorded = reducer(state, {
+          type: 'RECORD_DIALOGUE',
+          phase: state.phase,
+          seed: state.seed,
+          beat: state.beat,
+          serial: state.actionSerial,
+          speaker,
+          line: data.line,
+          emotion: data.emotion,
+        });
+        const next = reducer(recorded, { type: 'NEXT' });
+        const beat = storyFor(next.characters, next.seed)[next.beat];
+        if (next.phase !== 'playing' || !beat) return;
+        const nextKey = dialogueKey(next, beat.speaker);
+        void client.current
+          .request(
+            nextKey,
+            dialogueContext(
+              next,
+              beat.speaker,
+              beat.target ?? null,
+              dialogueScene(next, beat.label),
+            ),
+          )
+          .then((reply) => {
+            if (!obsolete) prepare.current?.(reply.line, reply.emotion, beat.speaker, beat.cue);
+          })
+          .catch(() => {
+            /* Foreground retry owns errors; speculative work must not interrupt speech. */
+          });
+      })
+      .catch((error) => {
+        if (obsolete) return;
         setEnabled(false);
         setFailed(true);
         setStatus(`Scripted dialogue is continuing. ${localConnectionError(error)}`);
-      }
-    })();
-    return () => controller.abort();
-    // Context is captured once per turn. Selecting a dossier or recording this line must not regenerate it.
+      });
+    return () => {
+      obsolete = true;
+    };
+    // Capture each turn once. Dossier selection and history updates do not invalidate it.
   }, [enabled, active, paused, key]);
   return {
     line: enabled && ready ? ready.line : fallback,

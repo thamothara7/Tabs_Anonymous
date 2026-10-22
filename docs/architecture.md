@@ -87,3 +87,11 @@ The extension's **Refresh cast and restart** explicitly takes a new snapshot, cl
 Native extension requests may omit Origin. The transport includes the runtime extension ID; absent-Origin requests must match the configured extension exactly. Requests with a website Origin still require the origin allowlist. User-gesture permission ordering is preserved. A native Chromium integration test covers the real header behavior; normal UI tests isolate the writer from locally installed models.
 
 On macOS, `local:start` registers two user launch agents: the loopback voice backend and an Ollama server with cloud disabled. Both run at login and restart on exit. `local:stop` removes only these agents. Models and runtimes remain independently installed.
+
+## Phase nine: pacing and presentation
+
+`DialogueClient` retains bounded turn promises and promotes a prepared request when its cue arrives. The hook simulates the next reducer step in memory after recording the current generated line, without changing live game state. It prepares only one story turn ahead; reactions cancel unrelated work. Prepared replies are recorded only on consumption. Kokoro preparation uses a four-entry browser cache keyed by exact text, voice, emotion, and therapist status. Cancelation and generation guards protect playback. Shorter model instructions, 10-to-22-word replies, a 30-minute keep-alive, and tighter speech profiles reduce waiting.
+
+The character rig uses per-instance SVG gradients, rim highlights, expressive eyebrows and category accessories. The ceremony and privacy-safe exports use a navy-and-gold stage with layered lighting and a podium. PNG cards and video share one renderer; cards are 2400×1350, video 1920×1080. Character sprites are cached at 2× resolution for animation. Recording requests 30 fps and 12 Mbps, preferring supported H.264 MP4 and falling back to WebM. Actual frame rate and bitrate depend on the browser.
+
+Text highlights now accept unquoted AI lines, deduplicate them, retain full titles and role labels, and omit explicit URLs. Image and video exports still receive aggregate counts and authored award copy only.

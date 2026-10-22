@@ -58,7 +58,7 @@ test('reel chapters, paused scrubbing, reduced motion, and cancellation', async 
     true,
   );
 });
-test('exports a real playable WebM with the full local reel', async ({ page }, info) => {
+test('exports a real playable Full HD video with the full local reel', async ({ page }, info) => {
   test.skip(
     info.project.name === 'mobile',
     'Native encoder verified once on desktop; mobile controls covered separately.',
@@ -70,35 +70,40 @@ test('exports a real playable WebM with the full local reel', async ({ page }, i
   await reel.getByLabel('Minimal motion').uncheck();
   await reel.getByRole('button', { name: 'Save video' }).click();
   const file = await download;
-  expect(file.suggestedFilename()).toBe('tabs-anonymous-recap.webm');
-  const path = 'artifacts/recap-film.webm';
+  expect(file.suggestedFilename()).toMatch(/^tabs-anonymous-recap\.(mp4|webm)$/);
+  const mp4 = file.suggestedFilename().endsWith('.mp4');
+  const path = `artifacts/recap-film.${mp4 ? 'mp4' : 'webm'}`;
   await file.saveAs(path);
   const bytes = await readFile(path);
-  expect(bytes.subarray(0, 4).toString('hex')).toBe('1a45dfa3');
+  if (mp4) expect(bytes.subarray(4, 8).toString()).toBe('ftyp');
+  else expect(bytes.subarray(0, 4).toString('hex')).toBe('1a45dfa3');
   expect(bytes.length).toBeGreaterThan(10000);
-  const metadata = await page.evaluate(async (data) => {
-    const raw = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
-    const url = URL.createObjectURL(new Blob([raw], { type: 'video/webm' }));
-    const video = document.createElement('video');
-    video.src = url;
-    video.muted = true;
-    try {
-      await new Promise<void>((resolve, reject) => {
-        video.onloadedmetadata = () => resolve();
-        video.onerror = () => reject(new Error('Invalid video'));
-      });
-      video.currentTime = 13;
-      await new Promise<void>((resolve) => {
-        video.onseeked = () => resolve();
-      });
-      return { width: video.videoWidth, height: video.videoHeight, time: video.currentTime };
-    } finally {
-      video.removeAttribute('src');
-      video.load();
-      URL.revokeObjectURL(url);
-    }
-  }, bytes.toString('base64'));
-  expect(metadata).toEqual({ width: 1200, height: 630, time: 13 });
+  const metadata = await page.evaluate(
+    async (data) => {
+      const raw = Uint8Array.from(atob(data.bytes), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([raw], { type: data.mime }));
+      const video = document.createElement('video');
+      video.src = url;
+      video.muted = true;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          video.onloadedmetadata = () => resolve();
+          video.onerror = () => reject(new Error('Invalid video'));
+        });
+        video.currentTime = 13;
+        await new Promise<void>((resolve) => {
+          video.onseeked = () => resolve();
+        });
+        return { width: video.videoWidth, height: video.videoHeight, time: video.currentTime };
+      } finally {
+        video.removeAttribute('src');
+        video.load();
+        URL.revokeObjectURL(url);
+      }
+    },
+    { bytes: bytes.toString('base64'), mime: mp4 ? 'video/mp4' : 'video/webm' },
+  );
+  expect(metadata).toEqual({ width: 1920, height: 1080, time: 13 });
   await expect(reel.getByRole('status')).toContainText('Video saved');
 });
 test('unsupported video keeps the recap usable', async ({ page }) => {

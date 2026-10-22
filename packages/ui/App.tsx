@@ -40,7 +40,7 @@ import { endingFor, initialState, MAX_KEEP, reducer } from '../game-core/reducer
 import type { Character, Fate } from '../game-core/types';
 import { AnimationDirector } from '../animation/director';
 import { TabCharacter } from './TabCharacter';
-import { recapSvg, recapText, downloadFile, downloadPng } from './recap';
+import { recapText, downloadFile, downloadPng, sessionHighlights } from './recap';
 import { votingLine, shortTitle } from '../game-core/dialogue';
 import { SessionAudio, lineDuration } from './audio';
 import {
@@ -56,6 +56,7 @@ import { loadSession, saveSession } from '../game-core/session';
 import { TherapyArena } from './TherapyArena';
 import { useDialogue, dialogueScene } from './useDialogue';
 import { RecapReel } from './RecapReel';
+import { AwardCard } from './AwardCard';
 
 function readPreference(key: string, fallback: boolean) {
   try {
@@ -150,6 +151,12 @@ export function App({
         line: text,
         emotion,
       }),
+    (text, emotion, actor, nextCue) => {
+      if (!sound || paused || modal) return;
+      const character = state.characters.find((c) => c.id === actor);
+      const delivery = deliveryFor(character ? { ...character, emotion } : undefined, nextCue);
+      audio.current.prefetch(text, voiceMap[actor], delivery.emotion, actor === 'therapist');
+    },
   );
   const line = dialogue.line;
   const startSession = () => {
@@ -178,8 +185,10 @@ export function App({
     if (state.actionLine && active)
       d.play(lineDuration(line), setElapsed, () => dispatch({ type: 'CLEAR_REACTION' }));
     else if (state.phase === 'playing' && beat)
-      d.play(Math.max(beat.duration, lineDuration(line)), setElapsed, () =>
-        dispatch({ type: 'NEXT' }),
+      d.play(
+        dialogue.enabled ? lineDuration(line) : Math.max(beat.duration, lineDuration(line)),
+        setElapsed,
+        () => dispatch({ type: 'NEXT' }),
       );
     else {
       d.cancelAll();
@@ -216,6 +225,7 @@ export function App({
     const engine = audio.current;
     if (!sound || paused || modal || dialogue.pending) {
       engine.stop();
+      if (!sound || paused || modal) engine.cancelWarmups();
       if (sound)
         setAudioMessage(
           dialogue.pending
@@ -352,10 +362,10 @@ export function App({
   const saveCard = async () => {
     setExporting(true);
     try {
-      await downloadPng(recapSvg(state));
+      await downloadPng(state);
       setToast('PNG award card saved. No tab names or links included.');
     } catch {
-      setToast('Could not create PNG. Use Save SVG instead.');
+      setToast('Could not create the PNG. Try saving the card again.');
     } finally {
       setExporting(false);
     }
@@ -455,56 +465,42 @@ export function App({
         {state.phase === 'results' ? (
           <section className="results" aria-label="Session results">
             <div className="results-art">
-              <span className="eyebrow">THE UNOFFICIAL TAB AWARDS</span>
-              <div className="trophy" aria-hidden="true">
-                <Trophy size={78} strokeWidth={1.4} />
+              <div className="ceremony-hero">
+                <span className="eyebrow">THE UNOFFICIAL TAB AWARDS</span>
+                <div className="trophy" aria-hidden="true">
+                  <Trophy size={78} strokeWidth={1.4} />
+                </div>
+                <h2>{ending.title}</h2>
+                <p>{ending.description}</p>
+                <div className="award-cast">
+                  {state.characters
+                    .filter((c) => kept === 0 || c.fate === 'keep')
+                    .slice(0, 6)
+                    .map((c) => (
+                      <TabCharacter key={c.id} character={c} emotion="victorious" />
+                    ))}
+                </div>
+                <div className="result-stats">
+                  <span>
+                    <b>{kept}</b>kept in the spotlight
+                  </span>
+                  <span>
+                    <b>{state.characters.filter((c) => c.fate === 'group').length}</b>found their
+                    people
+                  </span>
+                  <span>
+                    <b>{state.characters.filter((c) => c.fate === 'retire').length}</b>chilling in
+                    the balcony
+                  </span>
+                </div>
               </div>
-              <h2>{ending.title}</h2>
-              <p>{ending.description}</p>
-              <div className="award-cast">
-                {state.characters
-                  .filter((c) => kept === 0 || c.fate === 'keep')
-                  .slice(0, 6)
-                  .map((c) => (
-                    <TabCharacter key={c.id} character={c} emotion="victorious" />
-                  ))}
-              </div>
-              <div className="result-stats">
-                <span>
-                  <b>{kept}</b>kept in the spotlight
-                </span>
-                <span>
-                  <b>{state.characters.filter((c) => c.fate === 'group').length}</b>found their
-                  people
-                </span>
-                <span>
-                  <b>{state.characters.filter((c) => c.fate === 'retire').length}</b>chilling in the
-                  balcony
-                </span>
-              </div>
-              <details className="share-preview">
-                <summary>Preview share card</summary>
-                <img
-                  src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(recapSvg(state))}`}
-                  alt={`Share card: ${ending.title}. ${kept} kept, ${state.characters.filter((c) => c.fate === 'group').length} grouped, ${state.characters.filter((c) => c.fate === 'retire').length} retired.`}
-                />
-              </details>
-              <RecapReel state={state} reduced={reduced} />
               <div className="result-actions">
                 <button
                   className="button orange"
                   onClick={() => void saveCard()}
                   disabled={exporting}
                 >
-                  <ArrowDownToLine size={17} /> {exporting ? 'Creating card…' : 'Save recap card'}
-                </button>
-                <button
-                  className="button"
-                  onClick={() =>
-                    downloadFile(recapSvg(state), 'tabs-anonymous-award.svg', 'image/svg+xml')
-                  }
-                >
-                  Save SVG
+                  <ArrowDownToLine size={17} /> {exporting ? 'Creating card…' : 'Save PNG card'}
                 </button>
                 <button className="button" onClick={downloadRecap}>
                   Save text recap
@@ -513,8 +509,10 @@ export function App({
                   <RotateCcw size={16} /> Another session
                 </button>
               </div>
+              <AwardCard state={state} />
+              <RecapReel state={state} reduced={reduced} />
               <small>
-                PNG / SVG: no browsing details. Text recap: includes tab titles and session
+                PNG: 2400 × 1350, no browsing details. Text recap: includes tab titles and session
                 highlights.
               </small>
             </div>
@@ -534,15 +532,12 @@ export function App({
                   </div>
                 );
               })}
-              {state.history.some((h) => h.includes('“')) && (
+              {sessionHighlights(state).length > 0 && (
                 <div className="recap-highlights">
                   <span className="eyebrow">OVERHEARD IN THERAPY</span>
-                  {state.history
-                    .filter((h) => h.includes('“'))
-                    .slice(-3)
-                    .map((h, i) => (
-                      <p key={i}>{h}</p>
-                    ))}
+                  {sessionHighlights(state, 3).map((h, i) => (
+                    <p key={i}>{h}</p>
+                  ))}
                 </div>
               )}
               {integration}

@@ -14,7 +14,7 @@ The panel has been removed. There is one Sound toggle and a short status line. V
 
 Kokoro has no emotion-tag API. The worker directs pacing, sentence pauses, and restrained gain: faster and tighter for frustration, slower and spaced for disappointment, measured pauses for skepticism, and steady delivery for the therapist. Natural pitch and timbre are preserved. These delivery profiles do not guarantee actor-level emotional performance.
 
-Defend, challenge, retirement, victory, duplicates, and witness testimony select appropriate delivery. The scene waits for actual playback to end. Mouth animation begins when audio plays. Pause, mute, scene changes, and unmount cancel playback. Canceled inference may finish on the CPU, but its audio is discarded and the occupied inference slot stays bounded until completion.
+Defend, challenge, retirement, victory, duplicates, and witness testimony select appropriate delivery. The scene waits for actual playback to end. Neutral speech is quicker, the therapist uses a confident 1.06 speed, and sentence pauses are shorter with no added trailing pause. A bounded four-item audio cache prepares the next known turn while the current line plays. Pause, mute, and disposal cancel preparations; interrupted turns cannot play stale audio. Mouth animation begins when audio plays. Pause, mute, scene changes, and unmount cancel playback. Canceled inference may finish on the CPU, but its audio is discarded and the occupied inference slot stays bounded until completion.
 
 ## Local data flow
 

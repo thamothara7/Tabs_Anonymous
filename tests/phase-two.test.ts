@@ -6,7 +6,7 @@ import { initialState, reducer } from '../packages/game-core/reducer';
 import { encodeSession, decodeSession } from '../packages/game-core/session';
 import { storyFor } from '../packages/game-core/events';
 import { encodeSnapshot, restoreSnapshot } from '../apps/chrome-extension/session';
-import { recapSvg } from '../packages/ui/recap';
+import { createReel } from '../packages/ui/reel';
 const vote = () => {
   let s = reducer(initialState(demoCharacters), { type: 'START' });
   for (let i = 0; i < 10; i++) s = reducer(s, { type: 'NEXT' });
@@ -120,10 +120,8 @@ describe('verdicts, speakers, and checkpoints', () => {
     const s = vote();
     s.characters[0].name = 'PRIVATE CLIENT NAME';
     s.characters[0].url = 'https://private.example';
-    const svg = recapSvg(s);
-    expect(svg).toContain('<svg');
-    expect(svg).toContain('No browsing details');
-    expect(svg).not.toContain('PRIVATE CLIENT');
-    expect(svg).not.toContain('private.example');
+    const imageData = JSON.stringify(createReel(s));
+    expect(imageData).not.toContain('PRIVATE CLIENT');
+    expect(imageData).not.toContain('private.example');
   });
 });

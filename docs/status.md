@@ -1,4 +1,13 @@
-# Phase eight: 21 October 2026 · v0.8.0
+# Phase nine: 22 October 2026 · v0.9.0
+
+- Prepare the next AI reply and Kokoro audio while the current character speaks. Reuse prepared requests, cancel stale work, shorten replies and speech pauses, and reduce silent reading delays.
+- Upgrade the cast with shaded shells, rim highlights, richer eyes, asymmetric expressions, and category details. Rebuild the awards stage with lighting, a podium, and clearer export controls.
+- Replace SVG sharing with a 2400×1350 PNG card and matching PNG preview. Text recaps include full titles, verdict counts, deduplicated AI dialogue, and explicit link omission.
+- Full HD 1920×1080 video export, H.264 MP4 when supported, WebM fallback, target 30 fps and 12 Mbps. Silent 15-second film; no screen capture or browsing details.
+- A warm real-model browser run measured 42 ms and 20 ms between prepared speakers; first-load and interruption latency can be higher. A downloaded MP4 was independently identified as H.264, 1920×1080, with a 15-second duration.
+- Verification: 58 unit tests and 36 browser tests passed, with four intentional mobile skips. The final MP4 has approximately 30 fps at 1920×1080. Coverage includes prepared-request reuse, cancellation, full-title recap privacy, PNG decoding, native extension downloads, and real MP4 decoding and seeking.
+
+## Phase eight: 21 October 2026 · v0.8.0
 
 - Fixed native extension speech requests without an Origin header. Exact configured extension identity is accepted; unrelated website origins remain blocked. Permission is requested inside the user gesture and failures show the underlying cause.
 - Local Qwen3 conversations use tab topics, personalities, verdicts, and previous speakers. The therapist mediates; tabs answer each other through existing microphone, roast, and witness interactions. Generated captions are read by the existing distinct Kokoro cast. AI failures explicitly continue scripted dialogue with Retry.

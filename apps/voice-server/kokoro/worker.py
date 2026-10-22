@@ -46,11 +46,11 @@ VOICE_NAMES = {
 }
 # Kokoro has no emotion-tag API. Direct delivery with sentence pacing and pauses.
 PROFILES = {
-    'neutral': (1.00, 0.12, 0.92), 'happy': (1.07, 0.10, 0.98),
-    'smug': (0.94, 0.25, 0.91), 'angry': (1.08, 0.08, 1.00),
-    'shocked': (1.10, 0.23, 0.98), 'crying': (0.88, 0.30, 0.83),
-    'suspicious': (0.93, 0.26, 0.88), 'victorious': (1.06, 0.16, 1.00),
-    'therapist': (0.94, 0.22, 1.00),
+    'neutral': (1.10, 0.06, 0.92), 'happy': (1.07, 0.10, 0.98),
+    'smug': (1.04, 0.12, 0.91), 'angry': (1.08, 0.08, 1.00),
+    'shocked': (1.10, 0.23, 0.98), 'crying': (0.97, 0.18, 0.83),
+    'suspicious': (1.04, 0.12, 0.88), 'victorious': (1.06, 0.16, 1.00),
+    'therapist': (1.06, 0.10, 1.00),
 }
 
 def emit(data):
@@ -94,7 +94,8 @@ def synthesize(data):
                 audio = result.audio.detach().cpu().numpy()
                 if audio.size:
                     pieces.append(audio)
-            pieces.append(np.zeros(int(24000 * pause), dtype=np.float32))
+            if i < len(sentences) - 1:
+                pieces.append(np.zeros(int(24000 * pause), dtype=np.float32))
     if not pieces or sum(len(p) for p in pieces) < 1000:
         raise ValueError('No speech generated')
     audio = np.concatenate(pieces)

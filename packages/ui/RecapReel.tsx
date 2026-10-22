@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Pause, Play, RotateCcw, X } from 'lucide-react';
 import type { GameState } from '../game-core/types';
-import { chapterAt, createReel, drawReel, recordReel, REEL_DURATION, videoMime } from './reel';
+import {
+  chapterAt,
+  createReel,
+  drawReel,
+  recordReel,
+  REEL_DURATION,
+  videoExtension,
+  videoMime,
+} from './reel';
 
 export function RecapReel({ state, reduced }: { state: GameState; reduced: boolean }) {
   const reel = useMemo(() => createReel(state), [state]);
@@ -29,6 +37,10 @@ export function RecapReel({ state, reduced }: { state: GameState; reduced: boole
     let frame = 0,
       last = performance.now();
     const tick = (now: number) => {
+      if (now - last < 1000 / 30) {
+        frame = requestAnimationFrame(tick);
+        return;
+      }
       position.current = Math.min(REEL_DURATION, position.current + (now - last) / 1000);
       last = now;
       setSeconds(position.current);
@@ -69,10 +81,10 @@ export function RecapReel({ state, reduced }: { state: GameState; reduced: boole
       const url = URL.createObjectURL(blob),
         link = document.createElement('a');
       link.href = url;
-      link.download = 'tabs-anonymous-recap.webm';
+      link.download = `tabs-anonymous-recap.${videoExtension(blob.type)}`;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setMessage('Video saved. 15 seconds, silent, with no tab names or URLs.');
+      setMessage('Video saved. Full HD, 30 fps, silent, with no tab names or URLs.');
     } catch (e) {
       setMessage(
         e instanceof DOMException && e.name === 'AbortError'
@@ -93,12 +105,12 @@ export function RecapReel({ state, reduced }: { state: GameState; reduced: boole
           <span className="eyebrow">THE POST-CREDITS SESSION</span>
           <h3>Your tabs made a short film.</h3>
         </div>
-        <span className="reel-duration">15 SEC / SILENT</span>
+        <span className="reel-duration">1080P / 30 FPS</span>
       </div>
       <canvas
         ref={canvas}
         width={1200}
-        height={630}
+        height={675}
         role="img"
         aria-label={`${chapter.label}. ${chapter.title}. ${chapter.line}`}
       />
@@ -175,6 +187,7 @@ export function RecapReel({ state, reduced }: { state: GameState; reduced: boole
           : message}
       </p>
       <small>
+        {videoMime()?.startsWith('video/mp4') ? 'MP4' : 'WebM'} · Full HD · 15 seconds · Silent.
         Only fictional characters, your award, and verdict counts appear. No screen recording,
         microphone, or cloud upload.
       </small>

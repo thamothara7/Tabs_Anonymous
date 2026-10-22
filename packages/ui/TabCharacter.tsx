@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { Character, Emotion } from '../game-core/types';
 export function TabCharacter({
   character,
@@ -12,6 +13,7 @@ export function TabCharacter({
   compact?: boolean;
   gaze?: number;
 }) {
+  const uid = useId().replace(/:/g, '');
   const face = emotion ?? character.emotion;
   const angry = face === 'angry';
   const shocked = face === 'shocked';
@@ -20,10 +22,34 @@ export function TabCharacter({
   return (
     <svg
       className={`tab-rig face-${face} ${speaking ? 'speaking' : ''} ${compact ? 'compact' : ''}`}
-      viewBox="0 0 180 170"
+      viewBox="4 12 172 146"
       fill="none"
       aria-hidden="true"
     >
+      <defs>
+        <linearGradient
+          id={`${uid}-shell`}
+          x1="25"
+          y1="20"
+          x2="146"
+          y2="130"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#fff8eb" />
+          <stop offset=".25" stopColor={character.color} />
+          <stop offset=".75" stopColor={character.color} />
+          <stop offset="1" stopColor="#526975" />
+        </linearGradient>
+        <linearGradient id={`${uid}-glass`} x2="0" y2="1">
+          <stop stopColor="white" stopOpacity=".6" />
+          <stop offset="1" stopColor="white" stopOpacity="0" />
+        </linearGradient>
+        <radialGradient id={`${uid}-eye`}>
+          <stop stopColor="#fff" />
+          <stop offset=".8" stopColor="#fff9ed" />
+          <stop offset="1" stopColor="#d9d9cc" />
+        </radialGradient>
+      </defs>
       <ellipse
         className="rig-shadow"
         cx="90"
@@ -44,11 +70,49 @@ export function TabCharacter({
         </g>
         <path
           d="M34 50V32q0-10 10-10h42q6 0 10 7l6 10h34q10 0 10 10v63q0 13-13 13H47q-13 0-13-13Z"
-          fill={character.color}
+          fill={`url(#${uid}-shell)`}
           stroke="#27313a"
           strokeWidth="3"
         />
-        <path d="M40 53v-8h94q6 0 6 7v5H40Z" fill="white" opacity=".15" />
+        <path
+          d="M41 50V33q0-4 5-4h35q6 0 9 5l8 12h37q4 0 4 5v58q0 8-8 8H49q-8 0-8-8Z"
+          stroke="white"
+          strokeOpacity=".55"
+          strokeWidth="1.5"
+        />
+        <path d="M42 52h94v30Q94 60 42 91Z" fill={`url(#${uid}-glass)`} opacity=".5" />
+        <path
+          d="M45 121h87q11 0 11-11"
+          stroke="#243b46"
+          strokeOpacity=".22"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <circle cx="119" cy="49" r="2" fill="white" opacity=".65" />
+        <circle cx="127" cy="49" r="2" fill="white" opacity=".45" />
+        {character.category === 'code' && (
+          <g stroke="#564b81" strokeWidth="2.5" strokeLinecap="round">
+            <path d="m47 61 5-4-5-4m83 8-5-4 5-4" />
+            <path d="M47 112h12m4 0h5" opacity=".5" />
+          </g>
+        )}
+        {character.category === 'social' && (
+          <g transform="translate(136 30)">
+            <path d="M-9-5h18v15H4l-5 5V10H-9Z" fill="#fff3ec" stroke="#9e597a" strokeWidth="1.5" />
+            <circle cx="-4" cy="3" r="1.4" fill="#9e597a" />
+            <circle cx="1" cy="3" r="1.4" fill="#9e597a" />
+            <circle cx="6" cy="3" r="1.4" fill="#9e597a" />
+          </g>
+        )}
+        {character.category === 'other' && (
+          <path
+            d="m86 119 4-4 4 4-2 4 4 12-6 5-6-5 4-12Z"
+            fill="#426f83"
+            stroke="#25414d"
+            strokeWidth="1"
+          />
+        )}
+
         <path
           d="M43 112q0 5 6 5h82"
           stroke="white"
@@ -92,8 +156,8 @@ export function TabCharacter({
           />
         )}
         <g className="eye-pair">
-          <ellipse cx="68" cy="78" rx="13" ry={shocked ? 17 : 15} fill="#fff9ed" />
-          <ellipse cx="111" cy="78" rx="13" ry={shocked ? 17 : 15} fill="#fff9ed" />
+          <ellipse cx="68" cy="78" rx="13" ry={shocked ? 17 : 15} fill={`url(#${uid}-eye)`} />
+          <ellipse cx="111" cy="78" rx="13" ry={shocked ? 17 : 15} fill={`url(#${uid}-eye)`} />
           <g className="pupils" style={{ transform: `translateX(${gaze * 3}px)` }}>
             <ellipse
               cx={face === 'suspicious' ? 73 : 70}
@@ -114,8 +178,28 @@ export function TabCharacter({
           </g>
         </g>
         <g stroke="#283039" strokeWidth="4" strokeLinecap="round">
-          <path d={angry ? 'M57 58l21 7' : sad ? 'M57 64l20-7' : 'M58 57l18-2'} />
-          <path d={angry ? 'M101 65l21-7' : sad ? 'M103 57l20 7' : 'M103 55l18 2'} />
+          <path
+            d={
+              angry
+                ? 'M57 58l21 7'
+                : sad
+                  ? 'M57 64l20-7'
+                  : face === 'smug' || face === 'suspicious'
+                    ? 'M57 61h21'
+                    : 'M58 57l18-2'
+            }
+          />
+          <path
+            d={
+              angry
+                ? 'M101 65l21-7'
+                : sad
+                  ? 'M103 57l20 7'
+                  : face === 'smug' || face === 'suspicious'
+                    ? 'M103 54l18-4'
+                    : 'M103 55l18 2'
+            }
+          />
         </g>
         {character.category === 'study' && (
           <g stroke="#2d5148" strokeWidth="3">

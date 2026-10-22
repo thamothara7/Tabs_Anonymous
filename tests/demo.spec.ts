@@ -35,17 +35,16 @@ test('complete demo, consequences, and recap', async ({ page }, info) => {
   await page.getByRole('button', { name: 'Save text recap' }).click();
   expect((await download).suggestedFilename()).toBe('tabs-anonymous-recap.txt');
   const cardDownload = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Save recap card', exact: true }).click();
+  await page.getByRole('button', { name: 'Save PNG card', exact: true }).click();
   const card = await cardDownload;
   expect(card.suggestedFilename()).toBe('tabs-anonymous-award.png');
   await card.saveAs(`artifacts/${info.project.name}-award.png`);
   const png = await readFile(`artifacts/${info.project.name}-award.png`);
   expect(png.subarray(1, 4).toString()).toBe('PNG');
-  expect(png.readUInt32BE(16)).toBe(1200);
-  expect(png.readUInt32BE(20)).toBe(630);
-  const svgDownload = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Save SVG', exact: true }).click();
-  await (await svgDownload).saveAs(`artifacts/${info.project.name}-award.svg`);
+  expect(png.readUInt32BE(16)).toBe(2400);
+  expect(png.readUInt32BE(20)).toBe(1350);
+  await expect(page.locator('.png-award img')).toHaveAttribute('src', /^blob:/);
+  await expect(page.getByRole('button', { name: 'Save SVG', exact: true })).toHaveCount(0);
   await page.screenshot({ path: `artifacts/${info.project.name}-results.png`, fullPage: true });
   expect(errors).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(

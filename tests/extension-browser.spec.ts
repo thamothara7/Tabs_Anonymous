@@ -84,7 +84,7 @@ test('native Chromium grouping, cancel, protected tabs, and reload recovery', as
     await arena.getByRole('button', { name: 'Keep in the spotlight', exact: true }).click();
     await arena.getByRole('button', { name: 'The awards ceremony' }).click();
     const imageDownload = arena.waitForEvent('download');
-    await arena.getByRole('button', { name: 'Save recap card' }).click();
+    await arena.getByRole('button', { name: 'Save PNG card' }).click();
     expect((await imageDownload).suggestedFilename()).toBe('tabs-anonymous-award.png');
     await arena.getByRole('button', { name: 'Preview native groups' }).click();
     await expect(arena.locator('.native-preview')).toContainText('Big opportunities');

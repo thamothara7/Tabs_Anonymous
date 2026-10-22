@@ -1,6 +1,6 @@
 # Local conversations
 
-Kokoro reads the dialogue. Qwen3 writes it through Ollama on this computer. The cast receives its tab topics, roles, fictional verdicts, and the last six conversation lines, so a witness can respond to the previous speaker. The therapist retains George's voice and a steady delivery. No audio configuration panel or cloud key is needed.
+Kokoro reads the dialogue. Qwen3 writes it through Ollama on this computer. The cast receives its tab topics, roles, fictional verdicts, and up to four recent conversation lines, so a witness can respond to the previous speaker. The therapist retains George's voice and a steady delivery. No audio configuration panel or cloud key is needed.
 
 ## macOS setup
 
@@ -30,7 +30,7 @@ This leaves your model downloads and runtime installations intact. It does not s
 
 ## Limits and privacy
 
-Generation takes a few seconds and depends on hardware; cold model loading takes longer. The scene waits while a line is written and spoken. A small local model can misunderstand a topic or produce a weak joke. Its words never change browser state or fictional decisions. Page contents are never read. **Refresh cast and restart** updates the snapshot from currently open eligible tabs; there is no background scan.
+Replies target 10 to 22 words. During a regular story beat the next reply is prepared with the current generated line as context. Its Kokoro audio can also be prepared before the next cue. Promoting a prepared turn reuses the same request; interruptions discard speculative work. Generation takes a few seconds and depends on hardware; cold model loading takes longer. The first line and unplanned reactions may still need generation time. The writer model stays loaded for up to 30 minutes after use to reduce repeated cold starts. A small local model can misunderstand a topic or produce a weak joke. Its words never change browser state or fictional decisions. Page contents are never read. **Refresh cast and restart** updates the snapshot from currently open eligible tabs; there is no background scan.
 
 Only bounded titles, domains, fictional character IDs, roles, duplicate relationships, audible flags, verdicts, and recent conversation are sent to localhost. Full URLs and native browser IDs are omitted. The managed Ollama service disables cloud features. Setup downloads models; actual dialogue stays local. Generated lines become part of session recovery and the text recap, which should be reviewed before sharing.
 

@@ -3710,3 +3710,171 @@ h1 em {
     flex-wrap: wrap;
   }
 }
+
+/* Sculpted cast and a dedicated premiere stage. */
+.tab-rig {
+  filter: drop-shadow(0 5px 3px #07182128);
+}
+.theater:not(.cue-duplicate) .seat .character > .tab-rig {
+  height: calc(100% - 29px);
+}
+.theater .seat.selected .tab-rig {
+  filter: drop-shadow(0 0 5px #f5dfa33d);
+}
+.results {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  background: #121f30;
+}
+.results-art {
+  padding: 24px;
+  background: #142333;
+  min-width: 0;
+}
+.ceremony-hero {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  padding: 35px 20px 22px;
+  border: 1px solid #d6b57455;
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 50% 34%, #58635866, transparent 65%),
+    linear-gradient(115deg, #162735, #263d47 50%, #142231);
+}
+.ceremony-hero::before,
+.ceremony-hero::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  top: -30%;
+  width: 150px;
+  height: 135%;
+  background: linear-gradient(#efd69c25, transparent);
+  transform: rotate(24deg);
+  left: 8%;
+}
+.ceremony-hero::after {
+  left: auto;
+  right: 8%;
+  transform: rotate(-24deg);
+}
+.ceremony-hero > * {
+  position: relative;
+  z-index: 1;
+}
+.ceremony-hero .trophy {
+  display: grid;
+  place-items: center;
+  width: 110px;
+  height: 110px;
+  margin: 16px auto;
+  border-radius: 50%;
+  color: #f6d790;
+  background: radial-gradient(#e0b66430, transparent 70%);
+  filter: drop-shadow(0 7px 4px #0004);
+}
+.ceremony-hero h2 {
+  font-size: clamp(30px, 3.2vw, 52px);
+  color: #fff3dc;
+  line-height: 1.15;
+  margin: 10px 0;
+  text-wrap: balance;
+}
+.ceremony-hero > p {
+  max-width: 530px;
+  margin: 14px auto 24px;
+  color: #c1ccc7;
+  line-height: 1.7;
+  font-size: 14px;
+}
+.ceremony-hero .award-cast {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 12px 0 18px;
+  border-bottom: 5px solid #b69b6777;
+  border-radius: 0 0 45% 45%;
+  background: radial-gradient(ellipse at bottom, #87908645, transparent 68%);
+}
+.ceremony-hero .award-cast svg {
+  width: 105px;
+}
+.ceremony-hero .result-stats {
+  margin-bottom: 0;
+}
+.ceremony-hero .result-stats span {
+  font-size: 11px;
+  color: #b8c9c3;
+}
+.ceremony-hero .result-stats b {
+  color: #f0d39a;
+  font-weight: 700;
+  font-size: 30px;
+}
+.png-award {
+  width: 100%;
+  margin: 26px 0 0;
+}
+.png-award figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  margin-bottom: 12px;
+  text-align: left;
+}
+.png-award figcaption b {
+  color: #e5e9dd;
+  font-size: 14px;
+}
+.png-award figcaption span {
+  color: #c3b48d;
+  font: 10px monospace;
+  white-space: nowrap;
+}
+.png-award img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px #0003;
+}
+.results-art .recap-reel {
+  width: 100%;
+  box-sizing: border-box;
+}
+.recap-reel canvas {
+  aspect-ratio: 16 / 9;
+}
+.result-groups {
+  min-width: 0;
+}
+.group-result p,
+.recap-highlights p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1000px) {
+  .results {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .result-groups {
+    padding: 28px;
+  }
+}
+@media (max-width: 600px) {
+  .results-art {
+    padding: 12px;
+  }
+  .ceremony-hero {
+    padding: 24px 12px 18px;
+  }
+  .ceremony-hero .result-stats {
+    gap: 16px;
+  }
+  .ceremony-hero .result-stats span {
+    font-size: 9px;
+  }
+  .png-award figcaption {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

@@ -10,6 +10,45 @@ export class SessionAudio {
   private objectUrl: string | null = null;
   private generation = 0;
   private level = 0.65;
+  private prepared = new Map<string, Promise<Blob>>();
+  private warmups = new Map<string, AbortController>();
+  private speechKey(text: string, voiceId: string, emotion: string, therapist: boolean) {
+    return JSON.stringify({ text, voiceId, emotion, therapist });
+  }
+  private async fetchSpeech(key: string, signal: AbortSignal): Promise<Blob> {
+    const response = await fetch(`${VOICE_SERVER}/kokoro/speech`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...serviceHeaders() },
+      body: key,
+      signal,
+    });
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error ?? 'Speech generation failed.');
+    }
+    return response.blob();
+  }
+  prefetch(text: string, voiceId: string, emotion: string, therapist: boolean) {
+    const key = this.speechKey(text, voiceId, emotion, therapist);
+    if (this.prepared.has(key)) return;
+    this.cancelWarmups();
+    const controller = new AbortController();
+    this.warmups.set(key, controller);
+    const pending = this.fetchSpeech(
+      key,
+      AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]),
+    );
+    this.prepared.set(key, pending);
+    void pending.catch(() => this.prepared.delete(key)).finally(() => this.warmups.delete(key));
+    while (this.prepared.size > 4) this.prepared.delete(this.prepared.keys().next().value!);
+  }
+  cancelWarmups() {
+    for (const [key, controller] of this.warmups) {
+      controller.abort();
+      this.prepared.delete(key);
+    }
+    this.warmups.clear();
+  }
   get volume() {
     return this.level;
   }
@@ -32,17 +71,21 @@ export class SessionAudio {
     this.request = controller;
     const timeout = setTimeout(() => controller.abort(), 125000);
     try {
-      const response = await fetch(`${VOICE_SERVER}/kokoro/speech`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...serviceHeaders() },
-        body: JSON.stringify({ text, voiceId, emotion, therapist }),
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error ?? 'Speech generation failed.');
-      }
-      const blob = await response.blob();
+      const key = this.speechKey(text, voiceId, emotion, therapist);
+      let blob: Blob;
+      const prepared = this.prepared.get(key);
+      if (prepared) {
+        const warming = this.warmups.get(key);
+        if (warming)
+          controller.signal.addEventListener('abort', () => warming.abort(), { once: true });
+        this.warmups.delete(key); // Promoted to foreground. The generation guard owns playback.
+        try {
+          blob = await prepared;
+        } catch {
+          blob = await this.fetchSpeech(key, controller.signal);
+        }
+      } else blob = await this.fetchSpeech(key, controller.signal);
+      this.prepared.delete(key);
       if (generation !== this.generation) return;
       this.objectUrl = URL.createObjectURL(blob);
       const player = new Audio(this.objectUrl);
@@ -140,8 +183,10 @@ export class SessionAudio {
   }
   dispose() {
     this.stop();
+    this.cancelWarmups();
+    this.prepared.clear();
     void this.context?.close();
     this.context = null;
   }
 }
-export const lineDuration = (line: string) => Math.max(5500, line.split(/\s+/).length * 390 + 1600);
+export const lineDuration = (line: string) => Math.max(2600, line.split(/\s+/).length * 270 + 700);
