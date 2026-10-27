@@ -24,7 +24,12 @@ const escape = (s) =>
 const ollama = spawnSync('which', ['ollama'], { encoding: 'utf8' }).stdout.trim();
 const stop = process.argv.includes('--stop');
 const writerOnly = process.argv.includes('--writer-only');
-if (!stop && !ollama) throw new Error('Install Ollama first: brew install ollama');
+const voiceOnly = process.argv.includes('--voice-only');
+if (voiceOnly && writerOnly) throw new Error('Choose --voice-only or --writer-only, not both.');
+if (!stop && !voiceOnly && !ollama) throw new Error('Install Ollama first: brew install ollama');
+// Validate prerequisites before stopping any running service.
+if (!stop && !writerOnly && !existsSync(join(root, '.venv-kokoro/bin/python')))
+  throw new Error('Run npm run voice:setup first.');
 await mkdir(directory, { recursive: true });
 await mkdir(logs, { recursive: true });
 const services = [
@@ -54,17 +59,13 @@ const services = [
       ]
     : []),
 ];
-for (const service of services.filter(
-  (s) => !process.argv.includes('--voice-only') || s.label.endsWith('voice'),
-)) {
+for (const service of services.filter((s) => !voiceOnly || s.label.endsWith('voice'))) {
   const file = join(directory, `${service.label}.plist`);
   spawnSync('launchctl', ['bootout', `gui/${uid}/${service.label}`], { stdio: 'ignore' });
   if (stop) {
     await rm(file, { force: true });
     continue;
   }
-  if (service.label.endsWith('voice') && !existsSync(join(root, '.venv-kokoro/bin/python')))
-    throw new Error('Run npm run voice:setup first.');
   const plist = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict>
 <key>Label</key><string>${service.label}</string>
 <key>ProgramArguments</key><array>${service.args.map((a) => `<string>${escape(a)}</string>`).join('')}</array>
@@ -88,7 +89,7 @@ for (const service of services.filter(
 }
 if (!stop) {
   for (const url of [
-    ...(!process.argv.includes('--voice-only') ? ['http://127.0.0.1:11434/api/version'] : []),
+    ...(!voiceOnly ? ['http://127.0.0.1:11434/api/version'] : []),
     ...(!writerOnly ? ['http://127.0.0.1:4317/health'] : []),
   ]) {
     let ready = false;

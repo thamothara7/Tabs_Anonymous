@@ -2,9 +2,11 @@
 
 **Your browser tabs have formed a support group. They’d like a word with you.**
 
-An animated, interactive tab therapy arena: twelve expressive characters confess, expose duplicates, form questionable alliances, and ask you to decide their fate. Phase nine (v0.9.0) of the playable implementation of the [hackathon build spec](Tabs_Anonymous_Animated_Hackathon_Build_Spec.md).
+An animated, interactive tab therapy arena: twelve expressive characters confess, expose duplicates, form questionable alliances, and ask you to decide their fate. Release candidate v0.9.1 of the playable implementation of the [hackathon build spec](Tabs_Anonymous_Animated_Hackathon_Build_Spec.md).
 
 ![The waiting room](docs/screenshots/waiting-room.png)
+
+For the current go/no-go assessment and Devpost copy, see [submission readiness](docs/submission-readiness.md).
 
 ## Run locally
 

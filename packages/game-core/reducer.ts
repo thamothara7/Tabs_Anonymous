@@ -66,6 +66,8 @@ export function reducer(state: GameState, action: GameAction): GameState {
       selected: last.id,
       decisions: characters.filter((c) => c.fate !== 'undecided').length,
       undoStack: state.undoStack.slice(0, -1),
+      // Undo is a new conversational turn. Invalidate replies based on the old verdict.
+      actionSerial: state.actionSerial + 1,
       actionLine: null,
       actionCue: null,
       actionTarget: null,

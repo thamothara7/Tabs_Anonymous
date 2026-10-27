@@ -1,4 +1,12 @@
-# Phase nine: 22 October 2026 · v0.9.0
+# Submission audit: 27 October 2026 · v0.9.1
+
+- Fixed stale AI dialogue after Undo, including rejection of late replies based on the old verdict.
+- Fixed voting progress highlighting and added an accessible current-step indicator.
+- Fixed standalone Kokoro service startup and validated prerequisites before stopping running services.
+- Verification: 59 unit tests, 38 browser tests, four intentional skips, both production builds, six real Kokoro samples, and a real local AI response.
+- Added reviewed implementation-based Devpost copy and a [submission readiness checklist](submission-readiness.md). Public access, presentation recording, native permission prompts, physical audio, and organizer eligibility/deadline confirmation remain explicit release tasks.
+
+## Phase nine: 22 October 2026 · v0.9.0
 
 - Prepare the next AI reply and Kokoro audio while the current character speaks. Reuse prepared requests, cancel stale work, shorten replies and speech pauses, and reduce silent reading delays.
 - Upgrade the cast with shaded shells, rim highlights, richer eyes, asymmetric expressions, and category details. Rebuild the awards stage with lighting, a podium, and clearer export controls.
@@ -90,7 +98,7 @@
 1. Manually verify native permission grant/denial and browser-specific behavior in Chrome/Brave. Automated native tests pregrant permissions in an isolated profile; adapter tests cover grouping failures and stale data.
 2. Publish a public zero-permission demo. The repository is private; no external hosting is configured.
 3. Exact shared-element tab-strip breakout, richer chair physics, additional comedic timing, full session replay, and submission recording.
-4. Side-panel launcher, extension icons/store submission, and exhaustive accessibility/performance audits.
+4. Side-panel launcher, store submission, and exhaustive accessibility/performance audits.
 5. Confirm hackathon eligibility/deadline independently.
 
 The original specification is retained unchanged. This file describes implemented behavior, not completion of every roadmap item.

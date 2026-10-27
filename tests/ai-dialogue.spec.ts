@@ -1,5 +1,31 @@
 import { test, expect } from './fixtures';
 
+test('undo refreshes the therapist with the restored verdicts', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start therapy', exact: true }).click();
+  await expect(page.locator('.dialogue-status')).toContainText('Scripted dialogue');
+  for (let i = 0; i < 10; i++)
+    await page.getByRole('button', { name: 'Skip scene', exact: true }).click();
+  await page.getByRole('button', { name: 'Keep in the spotlight', exact: true }).click();
+  await page.getByRole('button', { name: 'Skip scene', exact: true }).click();
+  await page.route('http://127.0.0.1:4317/dialogue', (route) => {
+    const input = route.request().postDataJSON();
+    const kept = input.cast.filter((c: { fate: string }) => c.fate === 'keep').length;
+    return route.fulfill({
+      json: {
+        line: `There are ${kept} tabs in the spotlight. The rest are rehearsing their excuses.`,
+        emotion: 'neutral',
+        source: 'local-ai',
+      },
+    });
+  });
+  await page.getByRole('button', { name: 'Retry AI dialogue', exact: true }).click();
+  await expect(page.locator('.caption-copy [role="status"]')).toContainText('There are 1 tabs');
+  await page.getByRole('button', { name: 'Undo last verdict', exact: true }).click();
+  await expect(page.locator('.caption-copy [role="status"]')).toContainText('There are 0 tabs');
+  await expect(page.locator('.session-nav .current')).toContainText('The verdict');
+});
+
 test('AI improvises each turn with recent conversation and keeps generated captions on screen', async ({
   page,
 }) => {

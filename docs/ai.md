@@ -20,6 +20,8 @@ Reload Tabs Anonymous in `brave://extensions` or `chrome://extensions`, then rel
 
 The compact status line says when the cast is improvising, when AI dialogue is active, or when scripted dialogue is continuing. Retry is available after a failure. Click **AI dialogue on** to switch back to scripted lines. There is no silent cloud fallback.
 
+For only the Kokoro login service, use `npm run local:start -- --voice-only`; Ollama is not required for this mode.
+
 To stop and remove both login services:
 
 ```sh

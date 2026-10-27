@@ -400,9 +400,22 @@ export function App({
             <span
               key={label}
               className={
-                (state.phase === 'lobby' ? 0 : state.phase === 'results' ? 2 : 1) === i
+                (state.phase === 'lobby'
+                  ? 0
+                  : state.phase === 'results' || state.phase === 'voting'
+                    ? 2
+                    : 1) === i
                   ? 'current'
                   : ''
+              }
+              aria-current={
+                (state.phase === 'lobby'
+                  ? 0
+                  : state.phase === 'results' || state.phase === 'voting'
+                    ? 2
+                    : 1) === i
+                  ? 'step'
+                  : undefined
               }
             >
               <b>0{i + 1}</b>

@@ -43,6 +43,23 @@ describe('deterministic story and outcomes', () => {
     const state = voting();
     expect(reducer(state, { type: 'FINISH' })).toBe(state);
   });
+  it('undo rejects AI replies generated for the previous verdict', () => {
+    const before = reducer(voting(), { type: 'DECIDE', id: 'tab-0', fate: 'keep' });
+    const after = reducer(before, { type: 'UNDO_DECISION' });
+    expect(after.characters[0].fate).toBe('undecided');
+    expect(
+      reducer(after, {
+        type: 'RECORD_DIALOGUE',
+        phase: before.phase,
+        seed: before.seed,
+        beat: before.beat,
+        serial: before.actionSerial,
+        speaker: 'therapist',
+        line: 'The coding tab has secured a place in the spotlight.',
+        emotion: 'neutral',
+      }),
+    ).toBe(after);
+  });
   it('enforces six keep seats and lets the player reverse a choice', () => {
     let state = voting();
     for (let i = 0; i < 7; i++)
