@@ -1,16 +1,27 @@
-# Submission readiness: 27 October 2026
+# Submission readiness: 29 October 2026
 
-The v0.9.1 local build is ready for a rehearsed demonstration. The complete submission package is not ready to publish yet.
+The v0.9.1 local build is ready for a rehearsed demonstration. A narrated walkthrough and private handoff package are now prepared. Public access remains intentionally disabled at the owner's request.
 
 ## Pumpkin Playground rules
 
-Checked the official [overview](https://pumpkin-playground.devpost.com/) and [rules](https://pumpkin-playground.devpost.com/rules) on 27 October 2026:
+Checked the official [rules](https://pumpkin-playground.devpost.com/rules) and [schedule](https://pumpkin-playground.devpost.com/details/dates) on 29 October 2026:
 
-- The page header displays November 5, 2026 at 11:45am EST.
-- The overview requirements and written rules still list October 23 as the submission end date.
-- Judging eligibility requires California State University, Long Beach enrollment, with proof checked by the organizer.
+- Written rules now list submissions from October 27 through November 5.
+- The rules-page header displays November 6 at 3:00am EST, while the fetched schedule displays November 5 at 11:45am EST. Confirm the exact cutoff with the organizer; do not assume the later display applies.
+- CSULB enrollment is required for judging and prizes, with proof checked by the organizer. The rules now say all projects are eligible for social promotion.
 
-Do not assume the header supersedes the written rules. Confirm the applicable deadline and eligibility with ACM Long Beach. No organizer message or project submission has been sent. The rules allow a working or nonworking project; the presentation checklist below is our quality bar, not an invented organizer requirement.
+No organizer message or project submission has been sent. The rules allow a working or nonworking project; our presentation checklist is a quality bar rather than an additional organizer requirement.
+
+## Private presentation materials
+
+- `artifacts/submission/tabs-anonymous-walkthrough.mp4`: 78.8 seconds, 1920×1080 H.264 with AAC Kokoro narration and visible captions.
+- `artifacts/submission/walkthrough.srt`: matching subtitle file.
+- `artifacts/submission/tabs-anonymous-private-submission-kit.zip`: video, subtitles, builds, source archive, narrative, and this checklist.
+- Reproduce the recording with `node scripts/record-walkthrough.mjs` after both builds, Playwright Chromium, ffmpeg, and the local Kokoro service are available.
+
+The walkthrough records actual interface interactions using fictional tabs and scripted gameplay. The voiceover is separately generated local Kokoro narration. Native grouping is shown in a disposable Chromium profile with two fixture tabs and pregranted permissions, not the owner's browser. The footage shows the approval preview; it does not claim to demonstrate the native permission prompt. No real browsing data is recorded.
+
+Verification: reviewed a contact sheet across seven chapters; decoded the complete MP4 with ffmpeg; played and sought to 70 seconds in Chromium; confirmed 1920×1080 dimensions and a 78.8-second duration. Narration peak is -2.2 dBFS, with no detected clipping. Physical playback still needs review on the presentation device. No source, build, or video was made public.
 
 ## Verified locally
 
@@ -26,9 +37,9 @@ Automated audio generation does not prove physical speaker output. Native browse
 ## Before publishing
 
 1. Confirm the organizer's deadline and your judging eligibility.
-2. Make the source available to judges through an approved public repository or shared source archive. The current repository is private.
+2. Decide how judges will receive access when ready. The owner requested that everything stay private for now; the repository remains private and the handoff ZIP is local.
 3. Deploy the static `dist/` demo and open the public URL in a clean browser. Captioned play works without local services. AI and sound require the local setup; a hosted demo must not imply that they work for every visitor.
-4. Record and review a 60 to 90 second project walkthrough. Use fictional tabs to avoid exposing browsing details. Show gameplay and the real grouping preview separately. The 15-second in-app film is an export feature, not the walkthrough.
+4. Review the prepared 79-second walkthrough on the presentation device, then supply it through an approved sharing method. The 15-second in-app film remains a separate export feature.
 5. On the presentation device, reload the extension, check the native permission grant and denial flows, hear the therapist and a tab through the actual speakers, and rehearse once from a clean session.
 6. Paste the reviewed [Devpost narrative](devpost-submission.md), add screenshots and accessible links, and submit before the confirmed cutoff.
 

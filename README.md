@@ -6,7 +6,7 @@ An animated, interactive tab therapy arena: twelve expressive characters confess
 
 ![The waiting room](docs/screenshots/waiting-room.png)
 
-For the current go/no-go assessment and Devpost copy, see [submission readiness](docs/submission-readiness.md).
+For the current go/no-go assessment, Devpost copy, and the prepared private walkthrough, see [submission readiness](docs/submission-readiness.md).
 
 ## Run locally
 

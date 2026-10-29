@@ -1,4 +1,11 @@
-# Submission audit: 27 October 2026 · v0.9.1
+# Private submission materials: 29 October 2026
+
+- Recorded and reviewed a 79-second Full HD walkthrough of actual scripted gameplay and a disposable native grouping preview, with local Kokoro narration and subtitles.
+- Added a reproducible recorder and local private handoff ZIP. Verified full-file decoding, Chromium playback/seeking, and non-clipped narration.
+- Public demo, repository visibility, and video publication remain on hold at the owner's explicit request. Nothing was submitted to Devpost.
+- Updated organizer rules and date-display differences in the [readiness checklist](submission-readiness.md).
+
+## Submission audit: 27 October 2026 · v0.9.1
 
 - Fixed stale AI dialogue after Undo, including rejection of late replies based on the old verdict.
 - Fixed voting progress highlighting and added an accessible current-step indicator.
